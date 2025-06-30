@@ -122,7 +122,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
               className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
             >
               <Ticket className="h-4 w-4" />
-              <span>Create Ticket13</span>
+              <span>Create Ticket</span>
             </button>
           )}
 
