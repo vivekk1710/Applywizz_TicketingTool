@@ -41,6 +41,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [metadata, setMetadata] = useState<Record<string, any>>({});
   const [slaConfigs, setSlaConfigs] = useState<SLAConfig[]>([])
   const [loading, setLoading] = useState(true)
+  const [isCreated, setIsCreated] = useState(false);
   const [error, setError] = useState<string | null>(null)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
@@ -128,6 +129,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreated(true);
     if (!user) {
       alert('You must be logged in to submit a ticket');
       return;
@@ -200,6 +202,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         return;
       }
     }
+    setIsCreated(false);
     alert("Ticket created successfully!");
     onClose();
     onTicketCreated();
@@ -625,7 +628,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
             >
-              Create Ticket
+              {isCreated ? ' Creating Ticket... ' : ' Create Ticket '}
             </button>
           </div>
         </form>

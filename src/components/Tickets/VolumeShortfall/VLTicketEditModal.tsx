@@ -233,7 +233,7 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
     }
     setIsSubmittingComment(true);
     try {
-      // setIsUploading(true);
+      setIsUploading(true);
       let uploadedFilePath: string | null = null;
 
       if (file) {
@@ -338,6 +338,8 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
   };
 
   const handleForwardTicket = async () => {
+
+    setIsSubmittingComment(true);
     try {
       if (!ticket) return;
       if (!ticket.clientId) {
@@ -452,6 +454,8 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
     } catch (error) {
       console.error("Unexpected error:", error);
       alert("Unexpected error occurred while forwarding.");
+    } finally {
+      setIsSubmittingComment(false);
     }
   };
 
@@ -718,8 +722,6 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
       await fetchTicketFiles(); // refresh file list
       setSelectedFile(null);
     }
-
-
     // Call the onSubmit function with the updated ticket data
     onSubmit(updateData);
     setSelectedFile(null);
@@ -735,8 +737,6 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
     if (alreadyAssignedIds.has(user?.id)) return true;
     if (user.role === 'ca_team_lead' && ticket.type === 'volume_shortfall') return true;
     if (user.role === 'account_manager' && ticket.type === 'volume_shortfall') return true;
-    if (user.role === 'resume_team' && ticket.type === 'resume_update') return true;
-    if (user.role === 'scraping_team' && ticket.type === 'job_feed_empty') return true;
     return false;
   };
 
@@ -874,7 +874,7 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
                       </span>
                     </div>
                   </div>
-                  ): null}
+                ) : null}
               </div>
             </div>
           </div>
@@ -1004,10 +1004,10 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
                         />
                       </div>
                       <button onClick={handleCloseTicket} disabled={isSubmittingComment} className="bg-red-500 text-white px-4 py-2 rounded">
-                        {isSubmittingComment ? 'Closing ticket...' : 'Colse Ticket '}
+                        {isSubmittingComment ? 'Closing ticket...' : 'Close Ticket '}
                       </button>
                       <button onClick={handleForwardTicket} className="bg-blue-500 text-white px-4 py-2 rounded ml-4">
-                        Forward to CA & Scraping Team
+                        {isSubmittingComment ? ' Forwarding to CA & Scraping Team ... ' : ' Forward to CA & Scraping Team '}
                       </button>
                     </div>
                   </div>
@@ -1104,128 +1104,8 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
                         Resolve Ticket
                       </button>
                     </div>
-                  )}
-
-                {ticket.type !== 'volume_shortfall' && (
-
-                  <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-                    <h3 className="text-lg font-semibold text-green-900 mb-4">Take Action</h3>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Update Status
-                        </label>
-                        <select
-                          value={status}
-                          onChange={(e) => setStatus(e.target.value as TicketStatus)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                        >
-                          <option value="open">Open</option>
-                          <option value="in_progress">In Progress</option>
-                          {<option value="resolved">Resolved</option>}
-                          <option value="escalated">Escalated</option>
-                          <option value="closed">Closed</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Add Comment
-                        </label>
-                        <textarea
-                          value={comment}
-                          onChange={(e) => setComment(e.target.value)}
-                          rows={3}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                          placeholder="Add your comment or update..."
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Attach File</label>
-                        <input
-                          type="file"
-                          accept=".pdf,image/*"
-                          onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                          className="w-full text-sm border border-gray-300 rounded p-2"
-                        />
-                      </div>
-
-                      {status === 'resolved' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Resolution Details *
-                          </label>
-                          <textarea
-                            value={resolution}
-                            onChange={(e) => setResolution(e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                            placeholder="Describe how the issue was resolved..."
-                            required
-                          />
-                        </div>
-                      )}
-
-                      {status === 'escalated' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Escalation Reason *
-                          </label>
-                          <textarea
-                            value={escalationReason}
-                            onChange={(e) => setEscalationReason(e.target.value)}
-                            rows={3}
-                            className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500"
-                            placeholder="Explain why this ticket needs to be escalated..."
-                            required
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Role-Specific Actions */}
-                {user.role === 'scraping_team' && ticket.type === 'job_feed_empty' && (
-                  <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-                    <h3 className="text-lg font-semibold text-purple-900 mb-4">Scraping Team Actions</h3>
-                    <div className="space-y-3">
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-purple-600" />
-                        <span className="text-sm">Verified job feed sources</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-purple-600" />
-                        <span className="text-sm">Updated scraping algorithms</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-purple-600" />
-                        <span className="text-sm">Added new job sources</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
-                {user.role === 'resume_team' && ticket.type === 'resume_update' && (
-                  <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
-                    <h3 className="text-lg font-semibold text-orange-900 mb-4">Resume Team Actions</h3>
-                    <div className="space-y-3">
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-orange-600" />
-                        <span className="text-sm">Updated resume with new information</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-orange-600" />
-                        <span className="text-sm">Optimized keywords for ATS</span>
-                      </label>
-                      <label className="flex items-center space-x-2">
-                        <input type="checkbox" className="rounded border-gray-300 text-orange-600" />
-                        <span className="text-sm">Client approved final version</span>
-                      </label>
-                    </div>
-                  </div>
-                )}
-
+                  )
+                }
 
                 <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
                   <button
