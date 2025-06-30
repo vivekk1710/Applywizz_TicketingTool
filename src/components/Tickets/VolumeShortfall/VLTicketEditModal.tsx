@@ -63,8 +63,6 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
   const [wantsToEscalate, setWantsToEscalate] = useState(false);
   const [escalationReason, setEscalationReason] = useState('');
 
-
-
   useEffect(() => {
     const fetchUser = async () => {
       if (!ticket?.createdby) return;
@@ -139,10 +137,6 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
     }
 
   }, [ticket]);
-  // const {
-  //   data: { session },
-  //   error: sessionError,
-  // } = await supabase.auth.getSession();
 
   useEffect(() => {
     const fetchClientName = async () => {

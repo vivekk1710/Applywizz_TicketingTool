@@ -230,7 +230,16 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
       // Fetch Comments
       const { data: comments, error: commentError } = await supabase
         .from('ticket_comments')
-        .select('content, created_at, user_id, is_internal')
+        .select(`
+    content,
+    created_at,
+    user_id,
+    is_internal,
+    users (
+      name,
+      role
+    )
+  `)
         .eq('ticket_id', ticket.id)
         .order('created_at', { ascending: true });
 
@@ -1247,7 +1256,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                 {ticketComments.map((comment, index) => (
                   <li key={index} className="bg-gray-50 p-3 rounded border text-sm">
                     {/* <div className="text-gray-700">{comment.content} Commented by {comment.user_id}</div> */}
-                    <div className="text-gray-700">{comment.content} Commented by {userNameMap[comment.user_id] || 'Unknown'}</div>
+                    <div className="text-gray-700">{comment.content} Commented by {userNameMap[comment.user_id] || 'Unknown'} ({comment.users?.role?.replace('_', ' ') || 'Unknown Role'})</div>
                     <div className="text-gray-500 text-xs mt-1">
                       {new Date(comment.created_at).toLocaleString()}
                     </div>
