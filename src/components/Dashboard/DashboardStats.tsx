@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  Ticket, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle, 
-  TrendingUp, 
+import {
+  Ticket,
+  Clock,
+  AlertTriangle,
+  CheckCircle,
+  TrendingUp,
   Users,
   Calendar,
   BarChart3
@@ -14,11 +14,12 @@ import { DashboardStats as Stats } from '../../types';
 interface DashboardStatsProps {
   stats: Stats;
   userRole: string;
+  onTotalTicketsClick?: () => void;
 }
 
-export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole }) => {
+export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole, onTotalTicketsClick }) => {
   const isExecutive = ['ceo', 'coo', 'cro'].includes(userRole);
-  
+
   const statCards = [
     {
       label: 'Total Tickets',
@@ -27,6 +28,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole 
       color: 'blue',
       change: '+12%',
       show: true,
+      onClick: onTotalTicketsClick,
     },
     {
       label: 'Open Tickets',
@@ -85,9 +87,11 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole 
       {visibleStats.map((stat, index) => {
         const Icon = stat.icon;
         const isPositiveChange = stat.change.startsWith('+');
-        
+
         return (
-          <div key={index} className="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow">
+          <div key={index} className={`bg-white rounded-xl border border-gray-200 p-6 hover:shadow-lg transition-shadow ${stat.onClick ? 'cursor-pointer hover:bg-blue-50' : ''
+            }`}
+            onClick={stat.onClick}>
             <div className="flex items-center justify-between mb-4">
               <div className={`p-3 rounded-lg border ${colorClasses[stat.color as keyof typeof colorClasses]}`}>
                 <Icon className="h-6 w-6" />
@@ -96,7 +100,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole 
                 {stat.change}
               </div>
             </div>
-            
+
             <div className="space-y-1">
               <div className="text-2xl font-bold text-gray-900">{stat.value}</div>
               <div className="text-sm text-gray-500">{stat.label}</div>
