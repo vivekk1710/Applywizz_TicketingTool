@@ -1,260 +1,217 @@
-import React, { useState, useEffect } from 'react';
-import { X, User, Mail, Phone, MessageSquare, Building, MapPin, DollarSign, FileText, Calendar } from 'lucide-react';
-import { Client } from '../../types';
+import { useEffect, useState } from "react";
+import { supabase } from "../../lib/supabaseClient";
+import { User } from "@/types";
+import { Building, FileText, Phone, X } from 'lucide-react';
 
-interface ClientEditModalProps {
-  client: Client | null;
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (clientData: any) => void;
+interface Client {
+  id: string;
+  full_name: string;
+  personal_email: string;
+  whatsapp_number: string;
+  callable_phone: string;
+  company_email: string;
+  job_role_preferences: string[];
+  salary_range: string;
+  location_preferences: string[];
+  work_auth_details: string;
+  account_manager_id: string;
+  careerassociatemanagerid: string;
+  careerassociateid: string;
+  scraperid: string;
 }
 
-export const ClientEditModal: React.FC<ClientEditModalProps> = ({ 
-  client, 
-  isOpen, 
-  onClose, 
-  onSubmit 
-}) => {
-  const [formData, setFormData] = useState({
-    fullName: '',
-    personalEmail: '',
-    whatsappNumber: '',
-    callablePhone: '',
-    companyEmail: '',
-    jobRolePreferences: [] as string[],
-    salaryRange: '',
-    locationPreferences: [] as string[],
-    workAuthDetails: '',
-  });
+interface Props {
+  client: Client | null;
+  isOpen: boolean;
+  currentUserRole: String;
+  onClose: () => void;
+  onSubmit: (updatedClient: Client) => void;
+}
+
+
+export function ClientEditModal({ client, isOpen, currentUserRole, onClose, onSubmit }: Props) {
+  const [form, setForm] = useState<Client | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [users, setUsers] = useState<User[]>([]);
+
+  const isReadOnly = currentUserRole === "career_associate";
 
   useEffect(() => {
-    if (client) {
-      setFormData({
-        fullName: client.fullName,
-        personalEmail: client.personalEmail,
-        whatsappNumber: client.whatsappNumber,
-        callablePhone: client.callablePhone,
-        companyEmail: client.companyEmail,
-        jobRolePreferences: client.jobRolePreferences,
-        salaryRange: client.salaryRange,
-        locationPreferences: client.locationPreferences,
-        workAuthDetails: client.workAuthDetails,
-      });
-    }
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    const { data, error } = await supabase.from("users").select("*");
+    if (error) console.error("Failed to fetch users", error);
+    else setUsers(data);
+  };
+
+  useEffect(() => {
+    if (client) setForm({ ...client });
   }, [client]);
 
-  if (!isOpen || !client) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const updatedClient = {
-      ...client,
-      ...formData,
-      updatedAt: new Date(),
-    };
-
-    onSubmit(updatedClient);
-    onClose();
+  const handleChange = (field: string, value: any) => {
+    if (!form) return;
+    setForm((prev: any) => ({ ...prev, [field]: value }));
   };
 
-  const handleJobRoleChange = (role: string, checked: boolean) => {
-    if (checked) {
-      setFormData({
-        ...formData,
-        jobRolePreferences: [...formData.jobRolePreferences, role]
-      });
+  // const handleChange = (field: keyof Client, value: any) => {
+  //   if (!form) return;
+  //   setForm({ ...form, [field]: value });
+  // };
+
+  const handleSubmit = async () => {
+    if (!form) return;
+    setLoading(true);
+    const { error } = await supabase
+      .from("clients")
+      .update({ ...form })
+      .eq("id", client.id);
+    setLoading(false);
+    if (error) {
+      alert('Error updating client: ' + error.message);
     } else {
-      setFormData({
-        ...formData,
-        jobRolePreferences: formData.jobRolePreferences.filter(r => r !== role)
-      });
+      alert('Client updated successfully!');
+      onSubmit(form);
+      onClose();
     }
   };
 
-  const handleLocationChange = (location: string, checked: boolean) => {
-    if (checked) {
-      setFormData({
-        ...formData,
-        locationPreferences: [...formData.locationPreferences, location]
-      });
-    } else {
-      setFormData({
-        ...formData,
-        locationPreferences: formData.locationPreferences.filter(l => l !== location)
-      });
-    }
-  };
+  if (!isOpen || !form) return null;
 
   const jobRoles = [
-    'Software Engineer',
-    'Full Stack Developer',
-    'Frontend Developer',
-    'Backend Developer',
-    'Data Scientist',
-    'ML Engineer',
-    'DevOps Engineer',
-    'Product Manager',
-    'UI/UX Designer',
-    'QA Engineer'
+    'Software Engineer', 'Full Stack Developer', 'Frontend Developer', 'Backend Developer',
+    'Data Scientist', 'ML Engineer', 'DevOps Engineer', 'Product Manager', 'UI/UX Designer', 'QA Engineer'
   ];
 
   const locations = [
-    'New York',
-    'San Francisco',
-    'Seattle',
-    'Austin',
-    'Chicago',
-    'Boston',
-    'Los Angeles',
-    'Denver',
-    'Atlanta',
-    'Remote'
+    'New York', 'San Francisco', 'Seattle', 'Austin', 'Chicago',
+    'Boston', 'Los Angeles', 'Denver', 'Atlanta', 'Remote'
   ];
 
+  const renderInput = (label: string, field: string, type = "text") => (
+    <div>
+      <label className="block text-sm font-medium">{label}</label>
+      <input
+        type={type}
+        value={form[field] || ""}
+        onChange={(e) => handleChange(field, e.target.value)}
+        className="w-full border border-gray-300 p-2 rounded"
+        disabled={isReadOnly}
+      />
+    </div>
+  );
+
+  const renderTextarea = (label: string, field: string) => (
+    <div>
+      <label className="block text-sm font-medium">{label}</label>
+      <textarea
+        value={form[field] || ""}
+        onChange={(e) => handleChange(field, e.target.value)}
+        className="w-full border border-gray-300 p-2 rounded"
+        disabled={isReadOnly}
+      />
+    </div>
+  );
+
+  const renderDropdown = (label: string, field: string, role: string) => (
+    <div>
+      <label className="block text-sm font-medium">{label}</label>
+      <select
+        value={form[field] || ""}
+        onChange={(e) => handleChange(field, e.target.value)}
+        className="w-full border border-gray-300 p-2 rounded"
+        disabled={isReadOnly}
+      >
+        <option value="">Select {label}</option>
+        {users
+          .filter((u) => u.role === role)
+          .map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.name}
+            </option>
+          ))}
+      </select>
+    </div>
+  );
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900">Edit Client Information</h2>
-            <div className="flex items-center space-x-2 text-sm text-gray-600 mt-1">
-              <Calendar className="h-4 w-4" />
-              <span>Onboarded: {client.createdAt.toLocaleDateString()}</span>
-            </div>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
+      <div className="bg-white p-6 rounded-lg w-full max-w-4xl space-y-6 overflow-y-auto max-h-[90vh]">
+
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Edit Client</h2>
+          <button onClick={onClose}><X className="h-5 w-5" /></button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-8">
-          {/* Personal Information */}
-          <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-            <div className="flex items-center space-x-2 mb-4">
-              <User className="h-5 w-5 text-blue-600" />
-              <h3 className="text-lg font-semibold text-blue-900">Personal Information</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name *
-                </label>
-                <input
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({...formData, fullName: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Personal Email *
-                </label>
-                <input
-                  type="email"
-                  value={formData.personalEmail}
-                  onChange={(e) => setFormData({...formData, personalEmail: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                  required
-                />
-              </div>
-            </div>
+        {/* Personal Info */}
+        <div className="bg-blue-50 p-4 rounded border border-blue-200">
+          <h2 className="text-blue-600 font-semibold text-lg mb-3">Personal Information</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {renderInput("Full Name", "full_name")}
+            {renderInput("Personal Email", "personal_email")}
           </div>
+        </div>
 
-          {/* Contact Information */}
-          <div className="bg-green-50 rounded-lg p-6 border border-green-200">
-            <div className="flex items-center space-x-2 mb-4">
-              <Phone className="h-5 w-5 text-green-600" />
-              <h3 className="text-lg font-semibold text-green-900">Contact Information</h3>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  WhatsApp Number *
-                </label>
-                <input
-                  type="tel"
-                  value={formData.whatsappNumber}
-                  onChange={(e) => setFormData({...formData, whatsappNumber: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Callable Phone Number *
-                </label>
-                <input
-                  type="tel"
-                  value={formData.callablePhone}
-                  onChange={(e) => setFormData({...formData, callablePhone: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                  required
-                />
-              </div>
-            </div>
+        {/* Contact Info */}
+        <div className="bg-green-50 p-4 rounded border border-green-200">
+          <div className="flex items-center space-x-2 mb-4">
+            <Phone className="h-5 w-5 text-green-600" />
+            <h2 className="text-green-600 font-semibold text-lg">Contact Information</h2>
           </div>
-
-          {/* Professional Information */}
-          <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
-            <div className="flex items-center space-x-2 mb-4">
-              <Building className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-purple-900">Professional Information</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Company Email *
-                </label>
-                <input
-                  type="email"
-                  value={formData.companyEmail}
-                  onChange={(e) => setFormData({...formData, companyEmail: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Work Authorization Details *
-                </label>
-                <select
-                  value={formData.workAuthDetails}
-                  onChange={(e) => setFormData({...formData, workAuthDetails: e.target.value})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
-                  required
-                >
-                  <option value="">Select work authorization</option>
-                  <option value="H1B Visa">H1B Visa</option>
-                  <option value="Green Card">Green Card</option>
-                  <option value="F1 OPT">F1 OPT</option>
-                  <option value="L1 Visa">L1 Visa</option>
-                  <option value="US Citizen">US Citizen</option>
-                  <option value="Other">Other</option>
-                </select>
-              </div>
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {renderInput("WhatsApp Number", "whatsapp_number")}
+            {renderInput("Callable Phone", "callable_phone")}
           </div>
+        </div>
 
-          {/* Job Preferences */}
-          <div className="bg-orange-50 rounded-lg p-6 border border-orange-200">
-            <div className="flex items-center space-x-2 mb-4">
-              <FileText className="h-5 w-5 text-orange-600" />
-              <h3 className="text-lg font-semibold text-orange-900">Job Preferences</h3>
-            </div>
-            
+        {/* Company Info */}
+        <div className="bg-purple-50 p-4 rounded border border-purple-200">
+          <div className="flex items-center space-x-2 mb-4">
+            <Building className="h-5 w-5 text-purple-600" />
+            <h2 className="text-purple-600 font-semibold text-lg">Company Details</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+            {renderInput("Company Email", "company_email")}
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Work Authorization Details *
+            </label>
+            <select
+              value={form.work_auth_details}
+              onChange={(e) => handleChange("work_auth_details", e.target.value)}
+        disabled={isReadOnly}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
+              required
+            >
+              <option value="">Select work authorization</option>
+              <option value="H1B Visa">H1B Visa</option>
+              <option value="Green Card">Green Card</option>
+              <option value="F1 OPT">F1 OPT</option>
+              <option value="L1 Visa">L1 Visa</option>
+              <option value="US Citizen">US Citizen</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Job/Location Info */}
+        <div className="bg-orange-50 p-4 rounded border border-orange-200">
+          <div className="flex items-center space-x-2 mb-4">
+            <FileText className="h-5 w-5 text-orange-600" />
+            <h2 className="text-orange-600 font-semibold text-lg ">Job & Location Preferences</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+
+            {/* Job Preferences */}
+            {/* <div className="bg-orange-50 rounded-lg p-6 border border-orange-200"> */}
+
+            <h3 className="text-lg font-semibold text-orange-900">Job Preferences</h3>
+
+
             <div className="space-y-6">
+              {/* Job Roles */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Target Job Roles * (Select all that apply)
@@ -264,8 +221,14 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
                     <label key={role} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        checked={formData.jobRolePreferences.includes(role)}
-                        onChange={(e) => handleJobRoleChange(role, e.target.checked)}
+                        checked={form.job_role_preferences?.includes(role)}
+        disabled={isReadOnly}
+                        onChange={(e) => {
+                          const updatedRoles = e.target.checked
+                            ? [...form.job_role_preferences, role]
+                            : form.job_role_preferences.filter(r => r !== role);
+                          handleChange("job_role_preferences", updatedRoles);
+                        }}
                         className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                       />
                       <span className="text-sm text-gray-700">{role}</span>
@@ -273,14 +236,16 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
                   ))}
                 </div>
               </div>
-              
+
+              {/* Salary Range */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Expected Salary Range *
                 </label>
                 <select
-                  value={formData.salaryRange}
-                  onChange={(e) => setFormData({...formData, salaryRange: e.target.value})}
+                  value={form.salary_range}
+                  onChange={(e) => handleChange("salary_range", e.target.value)}
+        disabled={isReadOnly}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500"
                   required
                 >
@@ -293,7 +258,8 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
                   <option value="$200,000+">$200,000+</option>
                 </select>
               </div>
-              
+
+              {/* Location Preferences */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Preferred Locations * (Select all that apply)
@@ -303,8 +269,14 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
                     <label key={location} className="flex items-center space-x-2">
                       <input
                         type="checkbox"
-                        checked={formData.locationPreferences.includes(location)}
-                        onChange={(e) => handleLocationChange(location, e.target.checked)}
+                        checked={form.location_preferences?.includes(location)}
+        disabled={isReadOnly}
+                        onChange={(e) => {
+                          const updatedLocations = e.target.checked
+                            ? [...form.location_preferences, location]
+                            : form.location_preferences.filter(l => l !== location);
+                          handleChange("location_preferences", updatedLocations);
+                        }}
                         className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
                       />
                       <span className="text-sm text-gray-700">{location}</span>
@@ -313,26 +285,41 @@ export const ClientEditModal: React.FC<ClientEditModalProps> = ({
                 </div>
               </div>
             </div>
+            {/* </div> */}
           </div>
 
-          {/* Submit Buttons */}
-          <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
-            >
-              Update Client
-            </button>
+        </div>
+
+        {/* Team Assignments */}
+        <div className="bg-indigo-50 p-4 rounded border border-indigo-200">
+          <h2 className="text-indigo-600 font-semibold text-lg mb-3">Team Assignment</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {renderDropdown("Account Manager", "account_manager_id", "account_manager")}
+            {renderDropdown("CA Team Lead", "careerassociatemanagerid", "ca_team_lead")}
+            {renderDropdown("Career Associate", "careerassociateid", "career_associate")}
+            {renderDropdown("Scraper", "scraperid", "scraping_team")}
           </div>
-        </form>
+        </div>
+
+        {/* Buttons */}
+        <div className="mt-6 flex justify-end gap-4">
+          <button
+            className="bg-gray-300 text-black px-4 py-2 rounded hover:bg-gray-400"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
+          {currentUserRole !== 'career_associate' && (
+            <button
+              className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+              onClick={handleSubmit}
+              disabled={loading}
+            >
+              {loading ? "Saving..." : "Save Changes"}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
-};
+}

@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
 import { X, User, Mail, Phone, MessageSquare, Building, MapPin, DollarSign, FileText } from 'lucide-react';
 import { User as UserType } from '../../types';
+import { supabase } from '../../lib/supabaseClient';
+// import { useUser } from "@supabase/auth-helpers-react";
+
 
 interface ClientOnboardingModalProps {
   user: UserType;
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (clientData: any) => void;
+  onClientOnboarded:()=>void;
 }
 
 export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({ 
   user, 
   isOpen, 
-  onClose, 
-  onSubmit 
+  onClose,
+  onClientOnboarded
 }) => {
   const [formData, setFormData] = useState({
     fullName: '',
@@ -26,35 +29,46 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
     locationPreferences: [] as string[],
     workAuthDetails: '',
   });
+  // const user = useUser();
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    const clientData = {
-      ...formData,
-      onboardedBy: user.id,
-      accountManagerId: '2', // Default to Naveen for now
-      createdAt: new Date(),
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    onSubmit(clientData);
-    
-    // Reset form
-    setFormData({
-      fullName: '',
-      personalEmail: '',
-      whatsappNumber: '',
-      callablePhone: '',
-      companyEmail: '',
-      jobRolePreferences: [],
-      salaryRange: '',
-      locationPreferences: [],
-      workAuthDetails: '',
-    });
-    onClose();
-  };
+  if (!user) {
+    alert("User not logged in");
+    return;
+  }
+
+  const { fullName, personalEmail, whatsappNumber, callablePhone, companyEmail, jobRolePreferences, salaryRange, locationPreferences, workAuthDetails } = formData;
+
+  const { error } = await supabase.from("pending_clients").insert([
+    {
+      full_name: fullName,
+      personal_email: personalEmail,
+      whatsapp_number: whatsappNumber,
+      callable_phone: callablePhone,
+      company_email: companyEmail,
+      job_role_preferences: jobRolePreferences,
+      salary_range: salaryRange,
+      location_preferences: locationPreferences,
+      work_auth_details: workAuthDetails,
+      submitted_by: user.id
+    },
+  ]);
+
+  if (error) {
+    console.error("Error inserting pending client:", error.message);
+    alert("Failed to submit client. Check console.");
+    return;
+  }
+
+  alert("Client submitted successfully.");
+  onClientOnboarded();
+  onClose(); // close modal
+};
+
 
   const handleJobRoleChange = (role: string, checked: boolean) => {
     if (checked) {
@@ -116,7 +130,7 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-xl font-bold text-gray-900">Onboard New Client</h2>
-            <p className="text-sm text-gray-600">Sales Representative: {user.name}</p>
+            <p className="text-sm text-gray-600">Sales Representative: {user?.name}</p>
           </div>
           <button
             onClick={onClose}
@@ -203,11 +217,11 @@ export const ClientOnboardingModal: React.FC<ClientOnboardingModalProps> = ({
             </div>
           </div>
 
-          {/* Professional Information */}
+          {/* Company Information */}
           <div className="bg-purple-50 rounded-lg p-6 border border-purple-200">
             <div className="flex items-center space-x-2 mb-4">
               <Building className="h-5 w-5 text-purple-600" />
-              <h3 className="text-lg font-semibold text-purple-900">Professional Information</h3>
+              <h3 className="text-lg font-semibold text-purple-900">Company Information</h3>
             </div>
             
             <div className="space-y-4">

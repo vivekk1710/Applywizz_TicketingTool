@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { X, AlertTriangle, Clock, User, Calendar } from 'lucide-react';
-import { User as UserType, TicketType } from '../../types';
-import { rolePermissions, ticketTypeLabels } from '../../data/mockData';
-import { fetchSLAConfig, SLAConfig } from '../../services/slaService';
-import { supabase } from '../../lib/supabaseClient'; // your Supabase client instance
+import { User as UserType, TicketType } from '../../../types';
+import { rolePermissions, ticketTypeLabels } from '../../../data/mockData';
+import { fetchSLAConfig, SLAConfig } from '../../../services/slaService';
+import { supabase } from '../../../lib/supabaseClient'; // your Supabase client instance
 import { v4 as uuidv4 } from 'uuid';
 
 interface CreateTicketModalProps {
@@ -17,7 +17,7 @@ interface Client {
   id: any;
   full_name: any;
   job_role_preferences: any;
-  careerassociateManagerid: {
+  careerassociatemanagerid: {
     id: any;
     name: any;
   }[];
@@ -42,7 +42,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [slaConfigs, setSlaConfigs] = useState<SLAConfig[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedClient, setSelectedClient] = useState<Client|null>(null)
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null)
 
   const permissions = rolePermissions[user.role];
   const allowedTicketTypes = permissions.canCreateTickets;
@@ -61,41 +61,41 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     loadData()
   }, [])
   useEffect(() => {
-  const fetchClients = async () => {
-    const { data, error } = await supabase
-      .from('clients')
-      .select('id, full_name, job_role_preferences');
+    const fetchClients = async () => {
+      const { data, error } = await supabase
+        .from('clients')
+        .select('id, full_name, job_role_preferences');
+      // console.log(data);
+      if (error) {
+        console.error('Failed to fetch clients:', error);
+      } else {
+        setClients(data || []);
+      }
+    };
 
-    if (error) {
-      console.error('Failed to fetch clients:', error);
-    } else {
-      setClients(data || []);
-    }
-  };
-
-  fetchClients();
-}, []);
+    fetchClients();
+  }, []);
 
   useEffect(() => {
     const fetchClientsdata = async () => {
-          if (!clientId) return;
+      if (!clientId) return;
       const { data, error } = await supabase
         .from('clients')
         .select(`id,
            full_name, 
            job_role_preferences,
-          careerassociateManagerid:careerassociateManagerid (
+          careerassociatemanagerid:careerassociatemanagerid (
     id,
     name
   )`)
-  .eq('id', clientId)
-      .single(); // Since you're fetching only one row;
+        .eq('id', clientId)
+        .single(); // Since you're fetching only one row;
 
-       if (error) {
-      console.error('Error fetching selected client:', error);
-    } else {
-      setSelectedClient(data); // You can create a state like const [selectedClient, setSelectedClient] = useState(null)
-    }
+      if (error) {
+        console.error('Error fetching selected client:', error);
+      } else {
+        setSelectedClient(data); // You can create a state like const [selectedClient, setSelectedClient] = useState(null)
+      }
     };
 
     fetchClientsdata();
@@ -128,13 +128,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    //   const {
-    //   data: { user },
-    //   error2,
-    // } = await supabase.auth.getUser();
-
-    // // 🔐 Check if logged in
     if (!user) {
       alert('You must be logged in to submit a ticket');
       return;
@@ -161,12 +154,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       type: ticketType,
       title,
       description,
-      clientId: clientId || 'c1bd6c59-235a-4d8e-b60b-3e779e0194bc',//clientId || null,
-      createdBy: user.id|| '8cebdaa5-f94a-4428-9829-1dd8abd099a1', // assuming `user` is from auth/session/context
+      clientId: clientId || null,//clientId || null,
+      createdby: user.id, // assuming `user` is from auth/session/context
       priority: slaConfigs[0].priority,
       status: 'open', // new tickets are usually marked as open
       sla_hours: slaConfigs[0].hours,
-      createdAt: isoNow,
+      // createdat: isoNow,
       updatedAt: isoNow,
       // due_date: ticketData.due_date || isoNow,
       dueDate: calculateDueDate(slaConfigs[0].hours), // custom function
@@ -176,41 +169,41 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     };
 
     // Send to Supabase
-    const { error } = await supabase.from('tickets').insert(newTicket);
 
-    if (error) {
-      console.error("Supabase insert error:", error);
+    const { error: ticketError } = await supabase
+      .from('tickets')
+      .insert(newTicket)
+      .select('id')
+      .single();
+
+    if (ticketError) {
+      console.error("Supabase insert error:", ticketError);
       alert("Failed to create ticket.");
-    } else {
-      alert("Ticket created successfully!");
-      onClose();
-      onTicketCreated();
-      // close modal or reset form
+      return;
     }
-    //----
-    // e.preventDefault();
+    const ticketId = newTicket.id;
+    if (ticketType === 'volume_shortfall') {
+      const { error: vsError } = await supabase
+        .from('volume_shortfall_tickets')
+        .insert([{
+          ticket_id: ticketId,
+          expected_applications: metadata.expectedApplications,
+          actual_applications: metadata.actualApplications,
+          time_period: metadata.timePeriod,
+          notes: description,
+          forwarded_to_ca_scraping: false
+        }]);
 
-    //     if (!ticketType || !title || !description) return;
+      if (vsError) {
+        console.error("Failed to insert volume shortfall fields", vsError.message);
+        alert("Failed to save volume shortfall-specific data.");
+        return;
+      }
+    }
+    alert("Ticket created successfully!");
+    onClose();
+    onTicketCreated();
 
-    //     const sla = slaConfigs[0].ticket_type;
-
-    // // console.log("Supabase data:", sla);
-    //     const dueDate = new Date();
-    //     dueDate.setHours(dueDate.getHours() + slaConfigs[0].hours);
-
-    //     const ticketData = {
-    //       type: ticketType,
-    //       title,
-    //       description,
-    //       clientId: clientId || 'c1', // Default for demo
-    //       priority: slaConfigs[0].priority,
-    //       slaHours: slaConfigs[0].hours,
-    //       dueDate,
-    //       metadata,
-    //       urgency,
-    //     };
-
-    // onSubmit(ticketData);
 
     // Reset form
     setTicketType('');
@@ -262,8 +255,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         return (
           <div className="space-y-4">
             <>
-            
-            {getCAMInfo()}</>
+
+              {getCAMInfo()}</>
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -475,13 +468,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const getCAMInfo = () => {
     if (!selectedClient) return null;
     return (
-        <div className="flex items-center space-x-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <div className="text-sm">
-              <span className="font-medium text-blue-900">Client : {selectedClient.full_name} has </span>
-              <span className="text-blue-700 ml-2">Account Manager: {selectedClient.careerassociateManagerid?.name || 'Not assigned'}</span>
-            </div>
-          </div>
-      )
+      <div className="flex items-center space-x-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="text-sm">
+          <span className="font-medium text-blue-900">Client : {selectedClient.full_name} has </span>
+          <span className="text-blue-700 ml-2">CA Team Lead : {selectedClient.careerassociatemanagerid.name || 'Not assigned'}</span>
+        </div>
+      </div>
+    )
   };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -513,12 +506,6 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 required
               >
                 <option value="">Choose a client</option>
-
-                {/*/mockClients.map(client => (
-                  
-                //   <option key={client.id} value={client.id}>
-                //     {client.fullName} - {client.jobRolePreferences.join(', ')}
-                //   </option>*/}
                 {clients.map(client => (
 
                   <option key={client.id} value={client.id}>
@@ -526,7 +513,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   </option>
 
                 ))}
-                {}
+                { }
               </select>
             </div>
           )}
@@ -541,7 +528,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               onChange={(e) => handleTicketTypeChange(e.target.value as TicketType)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               required
-              >
+            >
               <option value="">Select ticket type</option>
               {allowedTicketTypes.map(type => (
                 <option key={type} value={type}>

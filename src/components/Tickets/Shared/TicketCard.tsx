@@ -1,7 +1,6 @@
 import React from 'react';
 import { Clock, User, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
-import { Ticket, TicketPriority } from '../../types';
-// import { ticketTypeLabels } from '../../data/mockData';
+import { Ticket, TicketPriority } from '../../../types';
 import { format } from 'date-fns';
 
 interface TicketCardProps {
@@ -23,6 +22,8 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
     resolved: 'bg-green-100 text-green-800',
     escalated: 'bg-red-100 text-red-800',
     closed: 'bg-gray-100 text-gray-800',
+    forwarded: 'bg-yellow-100 text-yellow-800',
+    replied: 'bg-orange-100 text-orange-800',
   };
 
   // console.log(ticket.assignedTo);
@@ -70,21 +71,9 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
 
           <div className="flex items-center space-x-1">
             <Clock className="h-4 w-4" />
-            <span>{format(new Date(ticket.createdAt), 'yyyy-MM-dd')}</span>
+            <span>{format(new Date(ticket.createdat), 'yyyy-MM-dd')}</span>
           </div>
         </div>
-
-        {/* <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-          {isOverdue ? (
-            <AlertTriangle className="h-4 w-4" />
-          ) : (
-            <Clock className="h-4 w-4" />
-          )}
-          <span className="font-medium">
-            {isOverdue ? `${hoursRemaining}h overdue` : `${hoursRemaining}h left`}
-          </span>
-        </div>
-      </div> */}
         {timeUntilDue !== null ? (
           <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
             {isOverdue ? (

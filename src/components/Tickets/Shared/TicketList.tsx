@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Ticket, User, TicketType, TicketStatus } from '../../types';
-import { TicketCard } from './TicketCard';
+import { Ticket, User, TicketType, TicketStatus } from '../../../types';
+import { TicketCard } from '../Shared/TicketCard';
 import { Search, Filter, SortAsc } from 'lucide-react';
-import { ticketTypeLabels } from '../../data/mockData';
+import { ticketTypeLabels } from '../../../data/mockData';
 
 interface AssignedUser {
   id: string;
@@ -28,15 +28,15 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignmen
   const filteredTickets = tickets
     .filter(ticket => {
       const matchesSearch = ticket.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
+        ticket.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesType = filterType === 'all' || ticket.type === filterType;
       const matchesStatus = filterStatus === 'all' || ticket.status === filterStatus;
-      
+
       return matchesSearch && matchesType && matchesStatus;
     })
     .sort((a, b) => {
       if (sortBy === 'created') {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return new Date(b.createdat).getTime() - new Date(a.createdat).getTime();
       }
       if (sortBy === 'priority') {
         const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
@@ -64,7 +64,7 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignmen
             />
           </div>
         </div>
-        
+
         <div className="flex gap-2">
           <select
             value={filterType}
@@ -76,7 +76,7 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignmen
               <option key={key} value={key}>{label}</option>
             ))}
           </select>
-          
+
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as TicketStatus | 'all')}
@@ -85,11 +85,13 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignmen
             <option value="all">All Status</option>
             <option value="open">Open</option>
             <option value="in_progress">In Progress</option>
+            <option value="forwarded">Forwarded</option>
+            <option value="replied">Replied</option>
             <option value="resolved">Resolved</option>
             <option value="escalated">Escalated</option>
             <option value="closed">Closed</option>
           </select>
-          
+
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'created' | 'priority' | 'due')}
@@ -113,26 +115,20 @@ export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignmen
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {filteredTickets.map(ticket => (
           <div key={ticket.id}>
-  <TicketCard ticket={ticket} onClick={onTicketClick} />
-  
-  <div className="mt-1 ml-2 text-sm text-blue-700">
-    Assigned To :{' '}
-    {assignments[ticket.id]?.length
-      ? assignments[ticket.id].map((u, i) => (
-          <span key={u.id}>
-            {u.name}
-            {i < assignments[ticket.id].length - 1 && ', '}
-          </span>
-        ))
-      : 'Unassigned'}
-  </div>
-</div>
+            <TicketCard ticket={ticket} onClick={onTicketClick} />
 
-          // <TicketCard
-          //   key={ticket.id}
-          //   ticket={ticket}
-          //   onClick={onTicketClick}
-          // />
+            <div className="mt-1 ml-2 text-sm text-blue-700">
+              Assigned To :{' '}
+              {assignments[ticket.id]?.length
+                ? assignments[ticket.id].map((u, i) => (
+                  <span key={u.id}>
+                    {u.name}
+                    {i < assignments[ticket.id].length - 1 && ', '}
+                  </span>
+                ))
+                : 'Unassigned'}
+            </div>
+          </div>
         ))}
       </div>
 

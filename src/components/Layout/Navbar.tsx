@@ -18,6 +18,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
               <span className="text-white font-bold text-sm">AW</span>
             </div>
             <h1 className="text-xl font-bold text-gray-900">ApplyWizz</h1>
+            <img className="text-xl font-bold text-gray-900 h-8 w-36" src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" alt="agg" />
           </div>
           <div className="hidden md:block h-6 w-px bg-gray-300"></div>
           <div className="hidden md:block">

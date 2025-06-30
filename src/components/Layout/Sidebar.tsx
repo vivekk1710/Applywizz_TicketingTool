@@ -1,10 +1,10 @@
 import React from 'react';
-import { 
-  LayoutDashboard, 
-  Ticket, 
-  Users, 
-  FileText, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Ticket,
+  Users,
+  FileText,
+  BarChart3,
   Settings,
   UserPlus,
   Search,
@@ -43,6 +43,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
       icon: Users,
       show: permissions.canViewClients,
     },
+    {
+      id: "pending_onboarding",
+      label: "Pending Onboarding",
+      icon: UserPlus,
+      show: ["cro", "ceo", "coo"].includes(user.role),
+    },
+
+
     {
       id: 'reports',
       label: 'Reports',
@@ -84,15 +92,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
           {visibleItems.map(item => {
             const Icon = item.icon;
             const isActive = activeView === item.id;
-            
+
             return (
               <button
                 key={item.id}
                 onClick={() => onViewChange(item.id)}
                 className={`
                   w-full flex items-center space-x-3 px-3 py-2 rounded-lg text-left transition-all duration-200
-                  ${isActive 
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200' 
+                  ${isActive
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
                     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
                   }
                 `}
@@ -104,7 +112,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
           })}
         </div>
       </div>
-      
+
       <div className="px-6 py-4 border-t border-gray-200 mt-auto">
         <div className="text-xs text-gray-500 mb-2">Quick Actions</div>
         <div className="space-y-2">
@@ -114,10 +122,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ user, activeView, onViewChange
               className="w-full flex items-center space-x-2 px-3 py-2 text-sm text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
             >
               <Ticket className="h-4 w-4" />
-              <span>Create Ticket</span>
+              <span>Create Ticket13</span>
             </button>
           )}
-          
+
           {permissions.canViewReports && (
             <button
               onClick={() => onViewChange('analytics')}

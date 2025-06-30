@@ -1,25 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { User, Ticket, Client, DashboardStats } from './types';
-// import { mockUsers, mockTickets, mockClients } from './data/mockData';
-import { mockClients } from './data/mockData';
+import { User, Ticket, Client, AssignedUser, DashboardStats } from './types';
 import { LoginForm } from './components/Login/LoginForm';
 import { Navbar } from './components/Layout/Navbar';
 import { Sidebar } from './components/Layout/Sidebar';
 import { DashboardStats as DashboardStatsComponent } from './components/Dashboard/DashboardStats';
 import { ExecutiveDashboard } from './components/Dashboard/ExecutiveDashboard';
-import { TicketList } from './components/Tickets/TicketList';
-import { CreateTicketModal } from './components/Tickets/CreateTicketModal';
-import { TicketEditModal } from './components/Tickets/TicketEditModal';
+import { format } from 'date-fns';
+import { TicketList } from './components/Tickets/Shared/TicketList';
+import { CreateTicketModal } from './components/Tickets/Shared/CreateTicketModal';
+import { VLTicketEditModal } from './components/Tickets/VolumeShortfall/VLTicketEditModal';
 import { ClientOnboardingModal } from './components/Clients/ClientOnboardingModal';
+import { PendingOnboardingList } from './components/Clients/PendingOnboardingList';
 import { ClientEditModal } from './components/Clients/ClientEditModal';
 import { UserManagementModal } from './components/Admin/UserManagementModal';
 import { Plus, Users, FileText, BarChart3, UserPlus, Edit, Settings } from 'lucide-react';
 import { supabase } from './lib/supabaseClient';
+import { supabaseAdmin } from './lib/supabaseAdminClient';
 
-type AssignedUser = {
-  id: string;
-  name: string;
-};
 
 function App() {
   const fetchData = async () => {
@@ -27,16 +24,28 @@ function App() {
     const { data: ticketData, error: ticketError } = await supabase
       .from('tickets')
       .select('*')
-      .order('createdAt', { ascending: false });
+      .order('createdat', { ascending: false });
     // if(ticketData)console.log(ticketData);
     if (ticketError) console.error(ticketError);
 
     // 2. Get all users
     const { data: userData, error: userError } = await supabase
       .from('users')
-      .select('id, name');
+      .select('*');
     // if(userData) console.log(userData);
     if (userError) console.error(userError);
+
+    const { data: clientData, error: clientError } = await supabase
+      .from('clients')
+      .select('*');
+
+    if (clientError) {
+      console.error("Error loading clients:", clientError.message);
+    } else {
+      console.log("Clients:", clientData);
+      setClients(clientData || []);
+    }
+
 
     // 3. Get all ticket assignments
     const { data: assignmentData, error: assignmentError } = await supabase
@@ -62,22 +71,46 @@ function App() {
 
     });
 
+    const { data: escalationData, error: escalationError } = await supabase
+      .from('ticket_escalations')
+      .select(`
+      id, reason, created_at, ticket_id, ca_id, escalated_by,
+      tickets ( id, title, type, short_code ),
+      ca: users!ticket_escalations_ca_id_fkey ( name ),
+      escalated_by_user: users!ticket_escalations_escalated_by_fkey ( name )
+      `);
+
+    if (escalationError) {
+      console.error('Failed to fetch escalations:', escalationError);
+    } else {
+      setEscalations(escalationData || []);
+    }
+
+    const { data: pendingClientsData, error: pendingClientsError } = await supabase
+      .from('pending_clients')
+      .select('*');
+
+    if (pendingClientsError) {
+      console.error("Error loading pending clients:", pendingClientsError.message);
+    } else {
+      setPendingClients(pendingClientsData || []);
+    }
+
+
     setTickets(ticketData || []);
-    // setUsers(userData || []);
+    setUsers(userData || []);
     setAssignments(assignmentMap);
   };
   // State to store the current user
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  // State to store the tickets
   // const [tickets, setTickets] = useState<Ticket[]>(mockTickets);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<User[]>([]);
-  // const [assignments, setAssignments] = useState<Record<string, User[]>>({});
+  const [pendingClients, setPendingClients] = useState<any[]>([]);
 
   // State to store the clients
-  const [clients, setClients] = useState<Client[]>(mockClients);
-  // State to store the users
-  // const [users, setUsers] = useState<User[]>(mockUsers);
+  const [clients, setClients] = useState<Client[]>([]);
+
   // State to store the active view
   const [activeView, setActiveView] = useState('dashboard');
   // State to store whether the create ticket modal is open
@@ -97,6 +130,7 @@ function App() {
 
   const [assignments, setAssignments] = useState<Record<string, AssignedUser[]>>({});
 
+  const [escalations, setEscalations] = useState<any[]>([]);
 
   useEffect(() => {
     fetchData();
@@ -104,8 +138,48 @@ function App() {
   // assignments: Record<string, { id: string; name: string; role: string }[]>
 
   // Function to handle user login
+  // const handleLogin = (user: User) => {
+  //   setCurrentUser(user);
+  //   // console.log('Logged in user:', user.name, 'with role:', user.role);
+  // };
+  // // console.log('Logged in user:', currentUser?.name, currentUser?.role);
+
+  // // Function to handle logout
+  // const handleLogout = () => {
+  //   setCurrentUser(null);
+  //   setActiveView('dashboard');
+  // };
+  useEffect(() => {
+    // Restore user from localStorage
+    const storedUser = localStorage.getItem('currentUser');
+    if (storedUser) {
+      try {
+        const user = JSON.parse(storedUser);
+        setCurrentUser(user);
+      } catch (e) {
+        console.error('Failed to parse stored user', e);
+      }
+    }
+
+    // Restore active view from sessionStorage
+    const storedView = sessionStorage.getItem('activeView');
+    if (storedView) {
+      setActiveView(storedView);
+    }
+
+    fetchData(); // Keep existing fetchData call
+  }, []); // Empty dependency array = runs only once on mount
+
+  // Add this to save view changes
+  useEffect(() => {
+    if (currentUser) {
+      sessionStorage.setItem('activeView', activeView);
+    }
+  }, [activeView, currentUser]); // Runs whenever activeView or currentUser changes
+
   const handleLogin = (user: User) => {
     setCurrentUser(user);
+    localStorage.setItem('currentUser', JSON.stringify(user));
     // console.log('Logged in user:', user.name, 'with role:', user.role);
   };
   // console.log('Logged in user:', currentUser?.name, currentUser?.role);
@@ -113,34 +187,35 @@ function App() {
   // Function to handle logout
   const handleLogout = () => {
     setCurrentUser(null);
+    localStorage.removeItem('currentUser');
     setActiveView('dashboard');
   };
 
-  // Function to handle the creation of a new ticket
-  // const handleCreateTicket = (ticketData: any) => {
-  //   // Create a new ticket object with the given ticket data
-  //   const newTicket: Ticket = {
-  //     id: `t${tickets.length + 1}`, // Generate a unique id for the new ticket
-  //     ...ticketData,
-  //     createdBy: currentUser!.id, // Set the creator of the ticket to the current user
-  //     assignedTo: getAutoAssignment(ticketData.type),
-  //     status: 'open' as const, // Set the status of the ticket to 'open'
-  //     escalationLevel: 0, // Set the escalation level of the ticket to 0
-  //     createdAt: new Date(), // Set the creation date of the ticket to the current date
-  //     updatedAt: new Date(), // Set the update date of the ticket to the current date
-  //     comments: [], // Set the comments of the ticket to an empty array
-  //   };
+  const getVisibleTickets = (): Ticket[] => {
+    if (!currentUser) return [];
 
-  //   // Update the tickets state with the new ticket and the existing tickets
-  //   setTickets([newTicket, ...tickets]);
-  // };
+    // Executive/Managerial roles see all tickets
+    if (['ceo', 'coo', 'cro', 'account_manager'].includes(currentUser.role)) {
+      return tickets;
+    }
+
+    // For other roles, filter tickets based on assignments
+    return tickets.filter(ticket => {
+      const assignedUsers = assignments[ticket.id] || [];
+      return assignedUsers.some(assignedUser => assignedUser.id === currentUser.id);
+    });
+  };
+
+
+
+
   const handleCreateTicket = async (ticketData: any) => {
     const newTicket = {
       ...ticketData,
       created_by: currentUser!.id,
       status: 'open',
       escalation_level: 0,
-      createdAt: new Date().toISOString(),
+      // createdat: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       comments: JSON.stringify([]),
       metadata: JSON.stringify(ticketData.metadata || {}),
@@ -158,59 +233,215 @@ function App() {
     }
   };
 
-
-  // Function to update a ticket
-  const handleUpdateTicket = (ticketId: string, updateData: any) => {
-    // Map through the tickets array and update the ticket with the matching id
-    setTickets(tickets.map(ticket =>
-      // If the ticket id matches the ticketId parameter, update the ticket with the new data
-      ticket.id === ticketId
-        ? { ...ticket, ...updateData, updatedAt: new Date() }
-        // Otherwise, return the original ticket
-        : ticket
-    ));
-  };
-
-  // Function to handle the onboard of a new client
-  const handleOnboardClient = (clientData: any) => {
-    // Create a new client object with an id and the client data
-    const newClient: Client = {
-      id: `c${clients.length + 1}`,
+  const handleAssignRoles = async (
+    pendingClientId: string,
+    clientData: any,          // ✅ Add this
+    rolesData: any
+  ) => {
+    console.log("INSERT PAYLOAD", {
       ...clientData,
-    };
+      ...rolesData
+    });
 
-    // Update the clients state with the new client
-    setClients([newClient, ...clients]);
+    const { error: insertError } = await supabase.from('clients').insert({
+      full_name: clientData.full_name,
+      personal_email: clientData.personal_email,
+      whatsapp_number: clientData.whatsapp_number,
+      callable_phone: clientData.callable_phone,
+      company_email: clientData.company_email,
+      job_role_preferences: clientData.job_role_preferences,
+      salary_range: clientData.salary_range,
+      location_preferences: clientData.location_preferences,
+      work_auth_details: clientData.work_auth_details,
+      account_manager_id: rolesData.accountManagerId,
+      careerassociatemanagerid: rolesData.careerassociatemanagerid,
+      careerassociateid: rolesData.careerassociateid,
+      scraperid: rolesData.scraperid,
+      onboarded_by: currentUser!.id
+    });
+
+    if (insertError) {
+      alert("Failed to complete onboarding");
+      console.error("Onboarding failed:", insertError.message);
+      return;
+    }
+
+    await supabase.from('pending_clients').delete().eq('id', pendingClientId);
+    await fetchData();
   };
+
+  const handleUpdateTicket = async (ticketId: string, updateData: any) => {
+    // 1. Update in Supabase
+    const { error } = await supabase
+      .from('tickets')
+      .update({
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      })
+      .eq('id', ticketId);
+
+    if (error) {
+      console.error('Failed to update ticket:', error);
+      // alert('Could not update ticket.');
+      return;
+    }
+
+    // 2. Refresh tickets after update
+    await fetchData();
+  };
+
+
+
+  const renderTicketEditModal = (selectedTicket: Ticket | null, selectedView: string) => {
+    if (!selectedTicket || selectedView !== "edit") return null;
+
+    switch (selectedTicket.type) {
+      case "volume_shortfall":
+        return (
+          <VLTicketEditModal
+            ticket={selectedTicket}
+            user={currentUser}
+            isOpen={isTicketEditModalOpen}
+            assignments={assignments}
+            onClose={() => {
+              setIsTicketEditModalOpen(false);
+              setSelectedTicket(null);
+            }}
+            onSubmit={(updateData) => {
+              if (selectedTicket) {
+                handleUpdateTicket(selectedTicket.id, updateData);
+              }
+            }}
+            onUpdate={() => {
+              fetchData(); // ⬅️ refresh data when modal updates a ticket
+              setIsTicketEditModalOpen(false);
+              setSelectedTicket(null);
+            }}
+          />
+        );
+      default:
+        return null;
+    }
+  };
+
 
   // Function to update a client
-  const handleUpdateClient = (updatedClient: Client) => {
+  const handleUpdateClient = async (updatedClient: Client) => {
     // Map through the clients array and update the client with the matching id
     setClients(clients.map(client =>
       client.id === updatedClient.id ? updatedClient : client
     ));
+
+    await fetchData();
   };
 
   // Function to handle creating a new user
-  const handleCreateUser = (userData: any) => {
-    // Create a new user object with an id and the user data
-    const newUser: User = {
-      id: `u${users.length + 1}`,
-      ...userData,
-    };
+  // const handleCreateUser = async (userData: any) => {
+  //   try {
+  //     // 1. Create auth user
+  //     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       email_confirm: true, // Bypass email confirmation
+  //       user_metadata: {
+  //         name: userData.name,
+  //         role: userData.role,
+  //         department: userData.department
+  //       }
+  //     });
 
-    setUsers([newUser, ...users]);
-  };
+  //     if (authError) throw new Error(`Auth error: ${authError.message}`);
+  //     if (!authUser.user) throw new Error('No user data returned');
+
+  //     // 2. Create user in public.users table
+  //     const { error: dbError } = await supabaseAdmin
+  //       .from('users')
+  //       .insert({
+  //         id: authUser.user.id,
+  //         name: userData.name,
+  //         email: userData.email,
+  //         role: userData.role,
+  //         department: userData.department,
+  //         is_active: userData.isActive
+  //       });
+
+  //     if (dbError) {
+  //       // Rollback auth user if DB insert fails
+  //       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+  //       throw new Error(`DB error: ${dbError.message}`);
+  //     }
+
+  //     // 3. Refresh UI
+  //     fetchData();
+  //     alert('User created successfully!');
+  //     return true;
+  //   } catch (error) {
+  //     console.error('User creation failed:', error);
+  //     alert(`User creation failed: ${error.message}`);
+  //     return false;
+  //   }
+  // };
+  // const handleCreateUser = async (userData: any) => {
+  //   try {
+  //     // Create auth user with email/password
+  //     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       email_confirm: true, // Skip email confirmation
+  //       user_metadata: {
+  //         name: userData.name,
+  //         role: userData.role,
+  //         department: userData.department
+  //       }
+  //     });
+
+  //     if (authError) throw new Error(`Auth error: ${authError.message}`);
+
+  //     // Create user in public.users table
+  //     const { error: dbError } = await supabase
+  //       .from('users')
+  //       .insert({
+  //         id: authUser.user.id,
+  //         name: userData.name,
+  //         email: userData.email,
+  //         role: userData.role,
+  //         department: userData.department,
+  //         is_active: userData.isActive
+  //       });
+
+  //     if (dbError) {
+  //       // Rollback auth user if DB insert fails
+  //       await supabase.auth.admin.deleteUser(authUser.user.id);
+  //       throw new Error(`DB error: ${dbError.message}`);
+  //     }
+
+  //     fetchData();
+  //     alert('User created successfully!');
+  //     return true;
+  //   } catch (error) {
+  //     alert(`User creation failed: ${error.message}`);
+  //     return false;
+  //   }
+  // };
+  // const handleCreateUser = (userData: any) => {
+  //   // Create a new user object with an id and the user data
+  //   const newUser: User = {
+  //     id: `u${users.length + 1}`,
+  //     ...userData,
+  //   };
+
+  //   setUsers([newUser, ...users]);
+  // };
 
   // This function takes in a userId and userData and updates the user with the given userId in the users array
-  
+
   const handleUpdateUser = (userId: string, userData: any) => {
     // Map through the users array and return a new array with the user with the given userId updated with the new userData
     setUsers(users.map(user =>
       user.id === userId ? { ...user, ...userData } : user
-    ));``
+    )); ``
   };
-  // const createdByUser = users.find(u => u.id === ticket.createdBy);
+  // const createdbyUser = users.find(u => u.id === ticket.createdby);
   // Function to handle deleting a user
   const handleDeleteUser = (userId: string) => {
     // Confirm with the user if they want to delete the user
@@ -220,25 +451,8 @@ function App() {
     }
   };
 
-  // Function to get auto-assignment based on ticket type
-  // const getAutoAssignment = (ticketType: string): string[] => {
-  //   // Auto-assign tickets based on type
-  //   const assignments: Record<string, string[]> = {
-  //     volume_shortfall: ['4'], // CA Manager
-  //     credential_issue: ['2'], // Account Manager
-  //     job_feed_empty: ['6'], // Scraping Team
-  //     resume_update: ['5'], // Resume Team
-  //     profile_data_issue: ['4'], // CA Manager
-  //     am_not_responding: ['7'], // CRO
-  //     // Add more assignments as needed
-  //   };
-  //   return assignments[ticketType] || ['2']; // Default to Account Manager
-  // };
-
   // Function to handle ticket click
   const handleTicketClick = (ticket: Ticket) => {
-
-    console.log(ticket);
     // Set the selected ticket to the clicked ticket
     setSelectedTicket(ticket);
     // Set the isTicketEditModalOpen state to true
@@ -255,12 +469,13 @@ function App() {
 
   // Function to get dashboard statistics
   const getDashboardStats = (): DashboardStats => {
+    const visibleTickets = getVisibleTickets();
     // Filter tickets by status and get the length of each array
-    const openTickets = tickets.filter(t => t.status === 'open').length;
-    const inProgressTickets = tickets.filter(t => t.status === 'in_progress').length;
-    const resolvedTickets = tickets.filter(t => t.status === 'resolved').length;
-    const escalatedTickets = tickets.filter(t => t.status === 'escalated').length;
-    const criticalTickets = tickets.filter(t => t.priority === 'critical').length;
+    const openTickets = visibleTickets.filter(t => t.status === 'open').length;
+    const inProgressTickets = visibleTickets.filter(t => t.status === 'in_progress').length;
+    const resolvedTickets = visibleTickets.filter(t => t.status === 'resolved').length;
+    const escalatedTickets = visibleTickets.filter(t => t.status === 'escalated').length;
+    const criticalTickets = visibleTickets.filter(t => t.priority === 'critical').length;
     // Filter tickets by due date and status and get the length of the array
     const slaBreaches = tickets.filter(t =>
       new Date(t.dueDate) < new Date() && t.status !== 'resolved'
@@ -268,7 +483,7 @@ function App() {
 
     // Return an object containing the dashboard statistics
     return {
-      totalTickets: tickets.length,
+      totalTickets: visibleTickets.length,
       openTickets,
       inProgressTickets,
       resolvedTickets,
@@ -300,7 +515,7 @@ function App() {
                     <span>Onboard Client</span>
                   </button>
                 )}
-                {currentUser && (
+                {(currentUser?.role === 'sales' || currentUser?.role == 'account_manager' || currentUser?.role == 'career_associate' || currentUser?.role == 'cro' || currentUser?.role == 'credential_resolution') && (
                   <button
                     onClick={() => setIsCreateTicketModalOpen(true)}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -315,13 +530,13 @@ function App() {
             <DashboardStatsComponent stats={stats} userRole={currentUser?.role || ''} />
 
             {isExecutive ? (
-              <ExecutiveDashboard user={currentUser!} tickets={tickets} />
+              <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 <div className="bg-white rounded-xl border border-gray-200 p-6">
                   <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Tickets</h2>
                   <div className="space-y-4">
-                    {tickets.slice(0, 5).map(ticket => (
+                    {getVisibleTickets().slice(0, 5).map(ticket => (
                       <div
                         key={ticket.id}
                         className="flex items-center justify-between p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
@@ -390,17 +605,18 @@ function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-bold text-gray-900">Tickets</h1>
-              <button
-                onClick={() => setIsCreateTicketModalOpen(true)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Create Ticket</span>
-              </button>
+              {currentUser?.role == 'account_manager' && (
+                <button
+                  onClick={() => setIsCreateTicketModalOpen(true)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <Plus className="h-5 w-5" />
+                  <span>Create Ticket</span>
+                </button>
+              )}
             </div>
-
             <TicketList
-              tickets={tickets}
+              tickets={getVisibleTickets()}
               user={currentUser!}
               assignments={assignments}
               onTicketClick={handleTicketClick}
@@ -446,29 +662,43 @@ function App() {
                       <tr key={client.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div>
-                            <div className="font-medium text-gray-900">{client.fullName}</div>
-                            <div className="text-sm text-gray-500">{client.personalEmail}</div>
+                            <div className="font-medium text-gray-900">{client.full_name}</div>
+                            <div className="text-sm text-gray-500">{client.personal_email}</div>
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{client.whatsappNumber}</div>
-                          <div className="text-sm text-gray-500">{client.callablePhone}</div>
+                          <div className="text-sm text-gray-900">{client.whatsapp_number}</div>
+                          <div className="text-sm text-gray-500">{client.callable_phone}</div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">{client.jobRolePreferences.join(', ')}</div>
-                          <div className="text-sm text-gray-500">{client.salaryRange}</div>
+                          <div className="text-sm text-gray-900">{<p className="text-sm text-gray-600">
+                            Roles:{" "}
+                            {client.job_role_preferences.join(", ")}
+                          </p>
+                          }</div>
+                          <div className="text-sm text-gray-500">{client.salary_range}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">{client.createdAt.toLocaleDateString()}</div>
+                          <div className="text-sm text-gray-900">{format(new Date(client.created_at), 'yyyy-MM-dd')}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <button
-                            onClick={() => handleClientEdit(client)}
-                            className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
-                          >
-                            <Edit className="h-4 w-4" />
-                            <span>Edit</span>
-                          </button>
+                          {currentUser?.role == 'career_associate' && (
+                            <button
+                              onClick={() => handleClientEdit(client)}
+                              className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                            >
+                              <span>View</span>
+                            </button>
+                          )}
+                          {currentUser?.role !== 'career_associate' && (
+                            <button
+                              onClick={() => handleClientEdit(client)}
+                              className="flex items-center space-x-1 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors"
+                            >
+                              <Edit className="h-4 w-4" />
+                              <span>Edit</span>
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -495,7 +725,7 @@ function App() {
 
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <div className="px-6 py-4 border-b border-gray-200">
-                <h2 className="font-semibold text-gray-900">System Users</h2>
+                <h2 className="font-semibold text-gray-900">System User</h2>
               </div>
 
               <div className="overflow-x-auto">
@@ -534,11 +764,11 @@ function App() {
                           {user.department || '-'}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.isActive
+                          <span className={`px-2 py-1 text-xs font-medium rounded-full ${user.is_active
                             ? 'bg-green-100 text-green-800'
                             : 'bg-red-100 text-red-800'
                             }`}>
-                            {user.isActive ? 'Active' : 'Inactive'}
+                            {user.is_active ? 'Active' : 'Inactive'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -583,7 +813,7 @@ function App() {
                 <div className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-gray-600">This Week</span>
-                    <span className="font-semibold">{tickets.length}</span>
+                    <span className="font-semibold">{getVisibleTickets().length}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Last Week</span>
@@ -598,6 +828,18 @@ function App() {
             </div>
           </div>
         );
+
+      case 'escalations':
+        return (<ExecutiveDashboard user={currentUser!} tickets={tickets} escalations={escalations} />);
+
+      case 'pending_onboarding':
+        return (
+          <PendingOnboardingList
+            pendingClients={pendingClients}
+            onAssignRoles={handleAssignRoles}
+          />
+        );
+
 
       default:
         return (
@@ -636,32 +878,19 @@ function App() {
         onTicketCreated={fetchData}
       />
 
-      <TicketEditModal
-        ticket={selectedTicket}
-        user={currentUser}
-        isOpen={isTicketEditModalOpen}
-        assignments={assignments}
-        onClose={() => {
-          setIsTicketEditModalOpen(false);
-          setSelectedTicket(null);
-        }}
-        onSubmit={(updateData) => {
-          if (selectedTicket) {
-            handleUpdateTicket(selectedTicket.id, updateData);
-          }
-        }}
-      />
+      {renderTicketEditModal(selectedTicket, "edit")}
 
       <ClientOnboardingModal
         user={currentUser}
         isOpen={isClientOnboardingModalOpen}
         onClose={() => setIsClientOnboardingModalOpen(false)}
-        onSubmit={handleOnboardClient}
+        onClientOnboarded={fetchData}
       />
 
       <ClientEditModal
         client={selectedClient}
         isOpen={isClientEditModalOpen}
+        currentUserRole={currentUser.role}
         onClose={() => {
           setIsClientEditModalOpen(false);
           setSelectedClient(null);
@@ -672,8 +901,6 @@ function App() {
       <UserManagementModal
         isOpen={isUserManagementModalOpen}
         onClose={() => setIsUserManagementModalOpen(false)}
-        users={users}
-        onCreateUser={handleCreateUser}
         onUpdateUser={handleUpdateUser}
         onDeleteUser={handleDeleteUser}
       />

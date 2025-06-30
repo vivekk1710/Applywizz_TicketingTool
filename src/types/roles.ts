@@ -18,7 +18,7 @@ export type UserRole =
   | 'sales'
   | 'account_manager'
   | 'career_associate'
-  | 'ca_manager'
+  | 'ca_team_lead'
   | 'resume_team'
   | 'scraping_team'
   | 'credential_resolution'

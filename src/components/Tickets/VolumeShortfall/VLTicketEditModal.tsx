@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, User, AlertTriangle, CheckCircle, MessageSquare, Calendar } from 'lucide-react';
-import { Ticket, User as UserType, TicketStatus } from '../../types';
-import { ticketTypeLabels } from '../../data/mockData';
+import { X, Clock, User, AlertTriangle, CheckCircle, MessageSquare, Calendar, Heading4 } from 'lucide-react';
+import { Ticket, User as UserType, TicketStatus } from '../../../types';
+import { ticketTypeLabels } from '../../../data/mockData';
 import { format } from 'date-fns';
-import { supabase } from '../../lib/supabaseClient';
-// const { data: session } = await supabase.auth.getSession();
-// console.log("Session:", session);
+import { supabase } from '../../../lib/supabaseClient';
+import { id } from 'date-fns/locale';
+import { toast } from 'sonner';
+// import { toast } from 'react-hot-toast';
 
 
 
@@ -21,24 +22,25 @@ interface TicketEditModalProps {
   assignments: Record<string, AssignedUser[]>;
   onClose: () => void;
   onSubmit: (ticketData: any) => void;
+  onUpdate: () => void;
 }
 
 
 
-export const TicketEditModal: React.FC<TicketEditModalProps> = ({
+export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
   ticket,
   user,
   isOpen,
   assignments,
   onClose,
-  onSubmit
+  onSubmit,
+  onUpdate
 }) => {
   // State variables to store ticket status, comment, resolution, and escalation reason
   const [status, setStatus] = useState<TicketStatus>('open');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [clientName, setClientName] = useState<string>('');
   const [resolution, setResolution] = useState('');
-  const [escalationReason, setEscalationReason] = useState('');
   const [ticketFiles, setTicketFiles] = useState<any[]>([]);
   // const [createdBy, setCreatedBy] = useState<string>('');
   const [createdByUser, setCreatedByUser] = useState<any>(null);
@@ -47,6 +49,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
   const [userComment, setUserComment] = useState('');
   const [userFile, setUserFile] = useState<File | null>(null);
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
+  const [alreadyAssignedIds, setAlreadyAssignedIds] = useState(new Set<string>());
 
   const [comment, setComment] = useState('');
   const [file, setFile] = useState<File | null>(null);
@@ -54,19 +57,25 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
   const currentUserRole = user?.role;
   const currentUserId = user?.id;
   const [ticketComments, setTicketComments] = useState<any[]>([]);
+  const [resolutionComment, setResolutionComment] = useState('');
+  const [resolutionFile, setResolutionFile] = useState<File | null>(null);
+  const [volumeShortfallData, setVolumeShortfallData] = useState<any>([]);
+  const [wantsToEscalate, setWantsToEscalate] = useState(false);
+  const [escalationReason, setEscalationReason] = useState('');
+
 
 
   useEffect(() => {
     const fetchUser = async () => {
-      if (!ticket?.createdBy) return;
+      if (!ticket?.createdby) return;
 
       const { data, error } = await supabase
         .from('users')
         .select('name')
-        .eq('id', ticket.createdBy)
+        .eq('id', ticket.createdby)
         .single();
 
-      console.log('Fetching data d', data);
+      // console.log('Fetching data d', data);
       if (error) {
         console.error('Error fetching user name:', error);
       } else {
@@ -76,27 +85,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
 
     fetchUser();
     // console.log('Fetching ticket',ticket);
-  }, [ticket ? ticket.createdBy : null]);
-
-
-
-  // const [allUsers, setAllUsers] = useState<UserType[]>([]);
-
-  //   useEffect(() => {
-  //   if (!isOpen || !ticket) return;
-
-  //   const fetchUsers = async () => {
-  //     const { data, error } = await supabase.from('users').select('*');
-  //     console.log(data);
-  //     if (error) {
-  //       console.error('Failed to fetch users:', error);
-  //     } else {
-  //       setAllUsers(data);
-  //     }
-  //   };
-
-  //   fetchUsers();
-  // }, [isOpen, ticket]);
+  }, [ticket ? ticket.createdby : null]);
 
   const fetchTicketFiles = async () => {
     if (!ticket?.id) return; // ✅ Fix: skip if ticket is null/undefined
@@ -121,8 +110,21 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
       setTicketFiles(data || []);
     }
   };
-  // console.log(user);
-  // console.log(ticket);
+  const fetchVolumeShortfallDetails = async () => {
+    if (ticket?.type !== 'volume_shortfall') return;
+
+    const { data, error } = await supabase
+      .from('volume_shortfall_tickets')
+      .select('*')
+      .eq('ticket_id', ticket.id)
+      .single();
+
+    if (error) {
+      console.error('Failed to fetch volume shortfall details:', error.message);
+    } else {
+      setVolumeShortfallData(data);
+    }
+  };
 
   useEffect(() => {
     if (ticket) {
@@ -132,9 +134,8 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
       setComment('');
       setResolution('');
       setEscalationReason('');
-
-
       fetchTicketFiles();
+      fetchVolumeShortfallDetails();
     }
 
   }, [ticket]);
@@ -154,7 +155,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
         .eq('id', ticket.clientId)
         .single(); // because only one client expected
 
-      console.log('Fetching client', data);
+      // console.log('Fetching client', data);
       if (error) {
         console.error('Error fetching client name:', error);
       } else {
@@ -167,12 +168,21 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
 
   useEffect(() => {
     const fetchTicketActivity = async () => {
-      if (!ticket||!ticket.id) return;
+      if (!ticket || !ticket.id) return;
 
       // Fetch Comments
       const { data: comments, error: commentError } = await supabase
         .from('ticket_comments')
-        .select('content, created_at, user_id, is_internal')
+        .select(`
+    content,
+    created_at,
+    user_id,
+    is_internal,
+    users (
+      name,
+      role
+    )
+  `)
         .eq('ticket_id', ticket.id)
         .order('created_at', { ascending: true });
 
@@ -193,57 +203,137 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
     fetchTicketActivity();
   }, [ticket]);
 
+  useEffect(() => {
+    const fetchTicketAssignments = async () => {
+      if (!ticket?.id) return;
+
+      const { data, error } = await supabase
+        .from('ticket_assignments')
+        .select('user_id')
+        .eq('ticket_id', ticket.id);
+
+      if (error) {
+        console.error('Failed to fetch ticket assignments:', error);
+        return;
+      }
+
+      const assignedIds = new Set(data.map(assignment => assignment.user_id));
+      setAlreadyAssignedIds(assignedIds);
+    };
+
+    fetchTicketAssignments();
+  }, [ticket?.id]);
 
   const handleCloseTicket = async () => {
     if (!ticket) return;
-    if (!comment || !file || !ticket.id) {
-      alert("Comment and file are required to close this ticket.");
+    if (!ticket.id || !user?.id) return;
+    if (!comment && !file) {
+      alert("Please write a comment or attach a file to close this ticket.");
       return;
     }
+    setIsSubmittingComment(true);
     try {
-      setIsUploading(true);
+      // setIsUploading(true);
+      let uploadedFilePath: string | null = null;
 
-      // Upload file to Supabase storage
-      const filePath = `${ticket.id}/${Date.now()}-${file.name}`;
-      const { error: uploadError } = await supabase.storage
-        .from('ticket-attachments')
-        .upload(filePath, file);
+      if (file) {
+        // Upload file to Supabase storage
+        const filePath = `${ticket.id}/${Date.now()}-${file.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-attachments')
+          .upload(filePath, file);
 
-      if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error("File upload failed:", uploadError);
+          alert("File upload failed.");
+          return;
+        }
+        uploadedFilePath = filePath;
+      }
 
       // Insert comment with status at time
-      await supabase.from('ticket_comments').insert([
-        {
-          ticket_id: ticket.id,
-          user_id: currentUserId,
-          content: comment,
-          is_internal: false,
-          ticketStatusAtTime: 'closed',
-        },
-      ]);
+      if (comment.trim() !== '') {
+        await supabase.from('ticket_comments').insert([
+          {
+            ticket_id: ticket.id,
+            user_id: currentUserId,
+            content: comment,
+            is_internal: false,
+            ticketStatusAtTime: 'closed',
+          },
+        ]);
+      }
 
       // Save file reference
-      await supabase.from('ticket_files').insert([
-        {
-          ticket_id: ticket.id,
-          uploaded_by: currentUserId,
-          file_path: filePath,
-        },
-      ]);
+      if (uploadedFilePath) {
+        const { error: insertError } = await supabase.from('ticket_files').insert([
+          {
+            ticket_id: ticket.id,
+            uploaded_by: currentUserId,
+            file_path: uploadedFilePath,
+            uploaded_at: new Date().toISOString(),
+          },
+        ]);
+        if (insertError) {
+          console.error("Failed to record uploaded file:", insertError);
+          alert("Error saving file info.");
+          return;
+        }
+      }
 
       // Update ticket status
-      await supabase.from('tickets').update({
+      const { error } = await supabase.from('tickets').update({
         status: 'closed',
         updatedAt: new Date().toISOString(),
       }).eq('id', ticket.id);
+      const { data: clientData, error: clientError } = await supabase
+        .from('clients')
+        .select('careerassociateid')
+        .eq('id', ticket.clientId)
+        .single();
+
+      if (clientError) {
+        console.error("Failed to fetch client info:", clientError);
+        alert("Could not get assigned users for this client.");
+        return;
+      }
+
+      const { careerassociateid } = clientData;
+      if (
+        ticket?.type === 'volume_shortfall' &&
+        ticket?.status === 'replied' &&
+        user?.role === 'ca_team_lead' &&
+        wantsToEscalate &&
+        escalationReason.trim().length > 0
+      ) {
+        const { error: escalationError } = await supabase
+          .from('ticket_escalations')
+          .insert([{
+            ticket_id: ticket.id,
+            escalated_by: user.id,
+            ca_id: careerassociateid, // assumes client info is already loaded
+            reason: escalationReason.trim(),
+          }]);
+
+        if (escalationError) {
+          console.error("Escalation insert failed:", escalationError.message);
+          toast.error("Failed to escalate CA. Ticket was closed, but escalation not saved.");
+        } else {
+          toast.success("Escalation raised on CA successfully.");
+        }
+      }
 
       alert("Ticket closed successfully!");
+      onUpdate?.(); // notify parent component of update
+      setUserComment('');
+      setUserFile(null);
       onClose(); // close modal
     } catch (error) {
       console.error(error);
       alert("Failed to close ticket.");
     } finally {
       setIsUploading(false);
+      setIsSubmittingComment(false);
     }
   };
 
@@ -254,11 +344,22 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
         alert("Client ID missing from ticket.");
         return;
       }
-
-      // Step 1: Fetch the client's assigned CA and Scraper
+      // Insert comment with status at time
+      if (comment && comment.trim() !== '') {
+        await supabase.from('ticket_comments').insert([
+          {
+            ticket_id: ticket.id,
+            user_id: currentUserId,
+            content: comment,
+            is_internal: false,
+            ticketStatusAtTime: 'closed',
+          },
+        ]);
+      }
+      // Step 1: Fetch assigned CA and Scraper from client
       const { data: clientData, error: clientError } = await supabase
         .from('clients')
-        .select('careerAssociateId, scraperId')
+        .select('careerassociateid, scraperid')
         .eq('id', ticket.clientId)
         .single();
 
@@ -268,58 +369,86 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
         return;
       }
 
-      const { careerAssociateId, scraperId } = clientData;
+      const { careerassociateid, scraperid } = clientData;
 
-      if (!careerAssociateId && !scraperId) {
+      if (!careerassociateid && !scraperid) {
         alert("No CA or Scraper assigned for this client.");
         return;
       }
 
-      const assignments = [];
-      if (careerAssociateId) {
-        assignments.push({
-          ticket_id: ticket.id,
-          user_id: careerAssociateId,
-          assignedBy: user?.id,
-        });
-      }
-      if (scraperId) {
-        assignments.push({
-          ticket_id: ticket.id,
-          user_id: scraperId,
-          assignedBy: user?.id,
-        });
-      }
-
-      // Step 2: Insert assignments
-      const { error: assignError } = await supabase
+      // Step 2: Fetch existing ticket assignments
+      const { data: existingAssignments, error: fetchError } = await supabase
         .from('ticket_assignments')
-        .insert(assignments);
+        .select('user_id')
+        .eq('ticket_id', ticket.id);
 
-      if (assignError) {
-        console.error("Failed to assign users:", assignError);
-        alert("Error while assigning users.");
+      if (fetchError) {
+        console.error("Failed to fetch existing assignments:", fetchError);
         return;
       }
 
-      // Step 3: Update ticket status + forward flag
+      const alreadyAssignedIds = new Set(existingAssignments?.map(a => a.user_id));
+
+      const newAssignments = [];
+      if (careerassociateid && !alreadyAssignedIds.has(careerassociateid)) {
+        newAssignments.push({
+          ticket_id: ticket.id,
+          user_id: careerassociateid,
+          assignedBy: user?.id,
+        });
+      }
+      if (scraperid && !alreadyAssignedIds.has(scraperid)) {
+        newAssignments.push({
+          ticket_id: ticket.id,
+          user_id: scraperid,
+          assignedBy: user?.id,
+        });
+      }
+
+      // Step 3: Insert only new assignments
+      if (newAssignments.length > 0) {
+        const { error: insertError } = await supabase
+          .from('ticket_assignments')
+          .insert(newAssignments);
+
+        if (insertError) {
+          console.error("Failed to assign users:", insertError);
+          alert("Error while assigning new users.");
+          return;
+        }
+      }
+      else {
+        alert("Ticket already forwarded to CA and Scraping Team.");
+      }
+
+      // Step 4: Update ticket status
       const { error: updateError } = await supabase
         .from('tickets')
         .update({
-          forwardedToCaScraping: true,
           status: 'forwarded',
           updatedAt: new Date().toISOString(),
         })
         .eq('id', ticket.id);
 
-      if (updateError) {
-        console.error("Failed to update ticket:", updateError);
-        alert("Could not update ticket status.");
+      const { error: updateErrorInVolumeShotfallTickes } = await supabase
+        .from("volume_shortfall_tickets")
+        .update({
+          forwarded_to_ca_scraping: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq("ticket_id", ticket.id);
+
+
+      if (updateError || updateErrorInVolumeShotfallTickes) {
+        console.error("Failed to update ticket status:", updateError);
+        // alert("Could not update ticket status.");
         return;
       }
-
-      alert("Ticket successfully forwarded to CA and Scraping Team.");
-      onClose(); // Close the modal
+      else {
+        alert("Ticket successfully forwarded to CA and Scraping Team.");
+      }
+      onUpdate?.();
+      onClose();
     } catch (error) {
       console.error("Unexpected error:", error);
       alert("Unexpected error occurred while forwarding.");
@@ -351,7 +480,6 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
           alert("File upload failed.");
           return;
         }
-
         uploadedFilePath = filePath;
       }
 
@@ -378,7 +506,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
           }
         ]);
       }
-
+      onUpdate?.();
       alert("Comment submitted successfully.");
       setUserComment('');
       setUserFile(null);
@@ -389,8 +517,155 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
     } finally {
       setIsSubmittingComment(false);
     }
+    // ✅ Only proceed if this is a volume_shortfall ticket that was forwarded
+    if (ticket.type === 'volume_shortfall' && ticket.status === 'forwarded') {
+      try {
+        // 1. Fetch all comments for this ticket
+        const { data: comments, error: commentError } = await supabase
+          .from('ticket_comments')
+          .select('user_id')
+          .eq('ticket_id', ticket.id);
+
+        if (commentError) throw commentError;
+
+        const uniqueUserIds = new Set<string>(comments.map(c => c.user_id).filter(Boolean));
+
+        // const uniqueUserIds = [...new Set(comments.map(c => c.user_id).filter(Boolean))];
+
+        // 2. Get the roles of all users who commented
+        const { data: userRoles, error: userError } = await supabase
+          .from('users')
+          .select('id, role')
+          .in('id', Array.from(uniqueUserIds));
+
+        // .in('id', uniqueUserIds);
+
+        if (userError) throw userError;
+
+        const hasCA = userRoles.some(u => u.role === 'career_associate');
+        const hasScraper = userRoles.some(u => u.role === 'scraping_team');
+
+        if (hasCA && hasScraper) {
+          // ✅ 3. Get CA Team Lead from the clients table using clientId
+          const { data: clientData, error: clientError } = await supabase
+            .from('clients')
+            .select('careerassociatemanagerid')
+            .eq('id', ticket.clientId)
+            .single();
+
+          if (clientError || !clientData?.careerassociatemanagerid) {
+            throw clientError || new Error("CA Team Lead not found for client");
+          }
+
+          const caManagerId = clientData.careerassociatemanagerid;
+
+          // ✅ 4. Update ticket status to 'replied'
+          const updateRes = await supabase
+            .from('tickets')
+            .update({
+              status: 'replied',
+              updatedAt: new Date().toISOString()
+            })
+            .eq('id', ticket.id);
+
+          // ✅ 5. Insert (or skip) ticket assignment to CA Team Lead
+          const { error: assignError } = await supabase
+            .from('ticket_assignments')
+            .upsert([
+              {
+                ticket_id: ticket.id,
+                user_id: caManagerId,
+                assignedBy: user.id // current user
+              }
+            ], { onConflict: 'ticket_id,user_id' });
+
+          if (updateRes.error || assignError) {
+            throw updateRes.error || assignError;
+          }
+
+          onUpdate?.();
+          console.log('✅ Ticket auto-updated to replied and reassigned to CA Team Lead.');
+        }
+      } catch (err) {
+        console.error('❌ Auto-update failed:', err.message || err);
+      }
+    }
+
   };
 
+  const handleResolveTicket = async () => {
+    if (!ticket || !ticket.id || !user?.id) return;
+    if (!resolutionComment && !resolutionFile) {
+      alert("Please write a resolution comment or attach a resolution file.");
+      return;
+    }
+    try {
+      // 1. Upload file (if exists)
+      let filePath = null;
+
+      if (resolutionFile) {
+        const path = `${ticket.id}/${Date.now()}-${resolutionFile.name}`;
+        const { error: uploadError } = await supabase.storage
+          .from('ticket-attachments')
+          .upload(path, resolutionFile);
+
+        if (uploadError) {
+          alert("File upload failed.");
+          return;
+        }
+
+        filePath = path;
+
+        const { error: insertFileError } = await supabase
+          .from('ticket_files')
+          .insert({
+            ticket_id: ticket.id,
+            file_path: path,
+            uploaded_by: user.id,
+          });
+
+        if (insertFileError) {
+          console.error("Failed to save file path:", insertFileError);
+        }
+      }
+
+      // 2. Add resolution comment
+      if (resolutionComment.trim()) {
+        const { error: commentError } = await supabase.from('ticket_comments').insert({
+          ticket_id: ticket.id,
+          user_id: user.id,
+          content: resolutionComment,
+          is_internal: false,
+        });
+
+        if (commentError) {
+          console.error("Failed to save comment:", commentError);
+          alert("Failed to save comment.");
+          return;
+        }
+      }
+
+      // 3. Update ticket status to resolved
+      const { error: updateError } = await supabase
+        .from('tickets')
+        .update({ status: 'resolved', updatedAt: new Date().toISOString() })
+        .eq('id', ticket.id);
+
+      if (updateError) {
+        alert("Failed to update ticket status.");
+        return;
+      }
+
+      alert("Ticket resolved.");
+      onUpdate?.();
+      setResolutionComment('');
+      setResolutionFile(null);
+      onClose();
+    } catch (error) {
+      console.error("Resolution error:", error);
+      alert("Unexpected error during resolution.");
+    }
+  };
 
   // If the modal is not open or there is no ticket, return null
   if (!isOpen || !ticket) return null;
@@ -408,32 +683,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
       updatedBy: user.id,
       updatedAt: new Date(),
     };
-    // if (selectedFile) {
-    //   const fileExt = selectedFile.name.split('.').pop();
-    //   const fileName = `${ticket.id}/${user.id}/${Date.now()}.${fileExt}`;
 
-    //   // Upload to your Supabase bucket: ticket-attachments
-    //   const { error: uploadError } = await supabase.storage
-    //     .from('ticket-attachments') // ✅ bucket name as YOU defined it
-    //     .upload(fileName, selectedFile);
-
-    //     if (uploadError) {
-    //     const { data: session } = await supabase.auth.getSession();
-    //     console.log("Session:", session);
-    //     console.error('File upload failed:', uploadError);
-    //     alert('File upload failed.');
-    //     return;
-    //   }
-
-    //   // Save file reference in ticket_files table
-    //   await supabase.from('ticket_files').insert({
-    //     ticket_id: ticket.id,
-    //     uploaded_by: user.id,
-    //     file_path: fileName,
-    //   });
-    //   await fetchTicketFiles(); // 🔁 Re-fetch to show the new file
-    //   setSelectedFile(null); // clear file field
-    // }
     if (selectedFile) {
       const fileExt = selectedFile.name.split('.').pop();
       const fileName = `${ticket.id}/${user.id}/${Date.now()}.${fileExt}`;
@@ -482,8 +732,8 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
   const canEdit = () => {
     // Check if user can edit this ticket based on role and assignment
     if (user.role === 'cro' || user.role === 'coo' || user.role === 'ceo') return true;
-    // if (ticket.assignedTo.includes(user?.id)) return true;
-    if (user.role === 'ca_manager' && ticket.type === 'volume_shortfall') return true;
+    if (alreadyAssignedIds.has(user?.id)) return true;
+    if (user.role === 'ca_team_lead' && ticket.type === 'volume_shortfall') return true;
     if (user.role === 'account_manager' && ticket.type === 'volume_shortfall') return true;
     if (user.role === 'resume_team' && ticket.type === 'resume_update') return true;
     if (user.role === 'scraping_team' && ticket.type === 'job_feed_empty') return true;
@@ -498,6 +748,8 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
       resolved: 'bg-green-100 text-green-800',
       escalated: 'bg-red-100 text-red-800',
       closed: 'bg-gray-100 text-gray-800',
+      forwarded: 'bg-yellow-100 text-yellow-800',
+      replied: 'bg-orange-100 text-orange-800',
     };
     return colors[status];
   };
@@ -508,16 +760,6 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
   const isOverdue = timeUntilDue < 0;
   // Calculate the number of hours remaining until the ticket is due
   const hoursRemaining = Math.abs(Math.floor(timeUntilDue / (1000 * 60 * 60)));
-
-  // Filter the mockUsers array to get the assigned users
-  // const assignedUsers = mockUsers.filter(u => ticket.assignedTo.includes(u.id));
-  // const assignedUsers = allUsers.filter(u => ticket.assignedTo.includes(u.id));
-
-  // Find the user who created the ticket
-
-  // console.log(user, ticket)
-  // const createdByUser = users.find(u => u.id === ticket.createdBy);
-  // const createdByUser = allUsers.find(u => u.id === ticket.createdBy);
 
   let metadata = {};
 
@@ -594,6 +836,10 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                   <p className="text-gray-900">{createdByUser} </p>
                 </div>
                 <div>
+                  <label className="text-sm font-medium text-gray-500">Ticket Sort Code</label>
+                  <p className="text-gray-900">{ticket.short_code}</p>
+                </div>
+                <div>
                   <label className="text-sm font-medium text-gray-500">Assigned To</label>
                   <div className="space-y-1">
                     {' '}
@@ -611,22 +857,24 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-gray-500">Created</label>
-                  <p className="text-gray-900">{format(new Date(ticket.dueDate), 'yyyy-MM-dd hh:mm a')}</p>
+                  <label className="text-sm font-medium text-gray-500">Created At</label>
+                  <p className="text-gray-900">{format(new Date(ticket.createdat), 'yyyy-MM-dd hh:mm a')}</p>
                 </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-500">SLA Status</label>
-                  <div className={`flex items-center space-x-2 ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
-                    {isOverdue ? (
-                      <AlertTriangle className="h-4 w-4" />
-                    ) : (
-                      <Clock className="h-4 w-4" />
-                    )}
-                    <span className="font-medium">
-                      {isOverdue ? `${hoursRemaining}h overdue` : `${hoursRemaining}h remaining`}
-                    </span>
+                {ticket.status !== 'resolved' ? (
+                  <div>
+                    <label className="text-sm font-medium text-gray-500">SLA Status</label>
+                    <div className={`flex items-center space-x-2 ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+                      {isOverdue ? (
+                        <AlertTriangle className="h-4 w-4" />
+                      ) : (
+                        <Clock className="h-4 w-4" />
+                      )}
+                      <span className="font-medium">
+                        {isOverdue ? `${hoursRemaining}h overdue` : `${hoursRemaining}h remaining`}
+                      </span>
+                    </div>
                   </div>
-                </div>
+                  ): null}
               </div>
             </div>
           </div>
@@ -653,63 +901,61 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
               </div>
             </div>
           )}
-          {/* --- Comments --- */}
-{ticketComments.length > 0 && (
-  <div className="mt-6 border-t pt-4">
-    <h3 className="text-md font-semibold mb-2">Comments:</h3>
-    <ul className="space-y-3">
-      {ticketComments.map((comment, index) => (
-        <li key={index} className="bg-gray-50 p-3 rounded border text-sm">
-          <div className="text-gray-700">{comment.content}</div>
-          <div className="text-gray-500 text-xs mt-1">
-            {new Date(comment.created_at).toLocaleString()}
-          </div>
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
-
-{/* --- Files --- */}
-{ticketFiles.length > 0 && (
-  <div className="mt-6 border-t pt-4">
-    <h3 className="text-md font-semibold mb-2">Uploaded Files:</h3>
-    <ul className="space-y-2 text-sm">
-      {ticketFiles.map((file, index) => (
-        <li key={index}>
-          <a
-            href={`https://ogwiuvxvhblhqmdsncyg.supabase.co/storage/v1/object/public/ticket-attachments/${file.file_path}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-blue-600 hover:underline"
-          >
-            {file.file_path.split('/').pop()}
-          </a>{' '}
-          <span className="text-gray-400 text-xs">
-            ({new Date(file.uploaded_at).toLocaleString()})
-          </span>
-        </li>
-      ))}
-    </ul>
-  </div>
-)}
-
-
-          {/* Ticket Metadata */}
-          {/* {Object.keys(ticket.metadata).length > 0 && (
-            <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-              <h3 className="text-lg font-semibold text-blue-900 mb-4">Ticket Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {Object.entries(ticket.metadata).map(([key, value]) => (
-                  <div key={key}>
-                    <label className="text-sm font-medium text-blue-700">{key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</label>
-                    <p className="text-blue-900">{Array.isArray(value) ? value.join(', ') : String(value)}</p>
-                  </div>
-                ))}
-              </div>
+          {currentUserRole === 'ca_team_lead' && ticket.type === 'volume_shortfall' && volumeShortfallData?.forwarded_to_ca_scraping && (
+            <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-300 mt-4">
+              <h3 className="text-md font-semibold mb-2 text-yellow-900">Volume Shortfall Extra Fields</h3>
+              <p>
+                <strong>Forwarded to CA & Scraping:</strong>{' '}
+                {volumeShortfallData?.forwarded_to_ca_scraping ? '✅ Yes' : '❌ No'}
+              </p>
             </div>
-          )} */}
+          )}
 
+          {/* --- Comments --- */}
+          {ticketComments.length > 0 && (
+            <div className="mt-6 border-t pt-4">
+              <h3 className="text-md font-semibold mb-2">Comments:</h3>
+              <ul className="space-y-3">
+                {ticketComments.map((comment, index) => (
+                  <li key={index} className="bg-gray-50 p-3 rounded border text-sm">
+                    <div className="text-gray-700">
+                      {comment.content}
+                      {' '}<span className="text-gray-600 italic">
+                        — {comment.users?.name || 'Unknown'} ({comment.users?.role?.replace('_', ' ') || 'Unknown Role'})
+                      </span>
+                    </div>
+                    <div className="text-gray-500 text-xs mt-1">
+                      {new Date(comment.created_at).toLocaleString()}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* --- Files --- */}
+          {ticketFiles.length > 0 && (
+            <div className="mt-6 border-t pt-4">
+              <h3 className="text-md font-semibold mb-2">Uploaded Files:</h3>
+              <ul className="space-y-2 text-sm">
+                {ticketFiles.map((file, index) => (
+                  <li key={index}>
+                    <a
+                      href={`https://ogwiuvxvhblhqmdsncyg.supabase.co/storage/v1/object/public/ticket-attachments/${file.file_path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-600 hover:underline"
+                    >
+                      {file.file_path.split('/').pop()}
+                    </a>{' '}
+                    <span className="text-gray-400 text-xs">
+                      ({new Date(file.uploaded_at).toLocaleString()})
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           {ticketFiles.length > 0 && (
             <div className="mt-6">
               <h3 className="text-md font-semibold text-gray-800 mb-2">Uploaded Files</h3>
@@ -737,7 +983,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
           {canEdit() &&
             (
               <form onSubmit={handleSubmit} className="space-y-6">
-                {currentUserRole === 'ca_manager' && ticket.type === 'volume_shortfall' && ticket.status === 'open' && (
+                {currentUserRole === 'ca_team_lead' && ticket.type === 'volume_shortfall' && (ticket.status === 'open' || ticket.status === 'replied') && (
                   <div className="bg-green-50 rounded-lg p-6 border border-green-200">
                     <h3 className="text-lg font-semibold text-green-900 mb-4">Take Action</h3>
                     <div className="space-y-4 mt-6">
@@ -748,13 +994,17 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                         onChange={(e) => setComment(e.target.value)}
                         required
                       />
-                      <input
-                        type="file"
-                        onChange={(e) => setFile(e.target.files?.[0] || null)}
-                      // required
-                      />
-                      <button onClick={handleCloseTicket} className="bg-red-500 text-white px-4 py-2 rounded">
-                        Close Ticket
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Upload File</label>
+                        <input
+                          type="file"
+                          onChange={(e) => setUserFile(e.target.files?.[0] || null)}
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          className="block w-full border rounded px-3 py-2"
+                        />
+                      </div>
+                      <button onClick={handleCloseTicket} disabled={isSubmittingComment} className="bg-red-500 text-white px-4 py-2 rounded">
+                        {isSubmittingComment ? 'Closing ticket...' : 'Colse Ticket '}
                       </button>
                       <button onClick={handleForwardTicket} className="bg-blue-500 text-white px-4 py-2 rounded ml-4">
                         Forward to CA & Scraping Team
@@ -762,7 +1012,31 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                     </div>
                   </div>
                 )}
-                {['career_associate', 'scraping_team'].includes(user?.role) && ticket.status === 'forwarded' && (
+                {user?.role === 'ca_team_lead' &&
+                  ticket?.type === 'volume_shortfall' &&
+                  ticket?.status === 'replied' && (
+                    <div className="bg-red-50 border border-red-300 rounded-lg p-4 mt-4">
+                      <label className="flex items-center gap-2 mb-2">
+                        <input
+                          type="checkbox"
+                          checked={wantsToEscalate}
+                          onChange={(e) => setWantsToEscalate(e.target.checked)}
+                        />
+                        <span className="text-red-700 font-medium">Escalate CA for this ticket</span>
+                      </label>
+                      {wantsToEscalate && (
+                        <textarea
+                          value={escalationReason}
+                          onChange={(e) => setEscalationReason(e.target.value)}
+                          placeholder="Write reason for escalation"
+                          className="w-full p-2 border border-gray-300 rounded"
+                          rows={3}
+                        />
+                      )}
+                    </div>
+                  )}
+
+                {['career_associate', 'scraping_team'].includes(user?.role) && ticket.type === 'volume_shortfall' && ticket.status === 'forwarded' && (
 
                   <div className="bg-green-50 rounded-lg p-6 border border-green-200">
                     <h3 className="text-lg font-semibold text-green-900 mb-4">Take Action</h3>
@@ -792,27 +1066,47 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                     </div>
                   </div>
                 )}
-                {['account_manager', 'cro', 'cro_manager'].includes(user?.role) &&
-                  ticket.status === 'forwarded' && (
-                    <div className="mt-6">
+                {['account_manager', 'coo', 'cro', 'ceo'].includes(user.role) &&
+                  ticket.type === 'volume_shortfall' &&
+                  ticket.status === 'closed' && (
+                    <div className="mt-6 border-t pt-4">
+                      <h3 className="text-md font-semibold mb-2 text-gray-800">Resolve Ticket</h3>
+
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Final Comment
+                      </label>
+                      <textarea
+                        value={resolutionComment}
+                        onChange={(e) => setResolutionComment(e.target.value)}
+                        rows={4}
+                        className="w-full border px-3 py-2 rounded-lg"
+                        placeholder="Add a final note before resolving..."
+                        required
+                      />
+
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Optional File Upload</label>
+                        <input
+                          type="file"
+                          accept=".pdf,.png,.jpg,.jpeg"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              setResolutionFile(e.target.files[0]);
+                            }
+                          }}
+                        />
+                      </div>
+
                       <button
-                        onClick={async () => {
-                          await supabase.from('tickets').update({
-                            status: 'resolved',
-                            updatedAt: new Date().toISOString()
-                          }).eq('id', ticket.id);
-                          alert("Ticket resolved.");
-                          onClose();
-                        }}
-                        className="bg-green-600 text-white px-4 py-2 rounded"
+                        className="mt-4 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded"
+                        onClick={handleResolveTicket}
                       >
-                        Mark as Resolved
+                        Resolve Ticket
                       </button>
                     </div>
                   )}
 
-
-                {currentUserRole !== 'ca_manager' || ticket.type !== 'volume_shortfall' || ticket.status !== 'open' && (
+                {ticket.type !== 'volume_shortfall' && (
 
                   <div className="bg-green-50 rounded-lg p-6 border border-green-200">
                     <h3 className="text-lg font-semibold text-green-900 mb-4">Take Action</h3>
@@ -940,12 +1234,6 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                     className="px-6 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                   >
                     Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors"
-                  >
-                    Update Ticket
                   </button>
                 </div>
               </form>
