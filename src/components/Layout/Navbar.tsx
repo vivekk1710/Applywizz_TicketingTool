@@ -14,10 +14,10 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            {/* <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-sm">AW</span>
             </div>
-            <h1 className="text-xl font-bold text-gray-900">ApplyWizz</h1>
+            <h1 className="text-xl font-bold text-gray-900">ApplyWizz</h1> */}
             <img className="text-xl font-bold text-gray-900 h-8 w-36" src="https://storage.googleapis.com/solwizz/website_content/Black%20Version.png" alt="agg" />
           </div>
           <div className="hidden md:block h-6 w-px bg-gray-300"></div>

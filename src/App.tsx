@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { User, Ticket, Client, AssignedUser, DashboardStats } from './types';
+import { User, Ticket, Client, AssignedUser, DashboardStats, TicketStatus, TicketType } from './types';
 import { LoginForm } from './components/Login/LoginForm';
 import { Navbar } from './components/Layout/Navbar';
 import { Sidebar } from './components/Layout/Sidebar';
@@ -137,6 +137,9 @@ function App() {
   const [assignments, setAssignments] = useState<Record<string, AssignedUser[]>>({});
 
   const [escalations, setEscalations] = useState<any[]>([]);
+  
+  const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
+  const [filterType, setFilterType] = useState<TicketType | 'all'>('all');  
 
   useEffect(() => {
     fetchData();
@@ -442,7 +445,8 @@ function App() {
                     <span>Onboard Client</span>
                   </button>
                 )}
-                {(currentUser?.role === 'sales' || currentUser?.role == 'account_manager' || currentUser?.role == 'career_associate' || currentUser?.role == 'cro' || currentUser?.role == 'credential_resolution') && (
+                {/* {(currentUser?.role === 'sales' || currentUser?.role == 'account_manager' || currentUser?.role == 'career_associate' || currentUser?.role == 'cro' || currentUser?.role == 'credential_resolution') && ( */}
+                {(currentUser?.role == 'account_manager' || currentUser?.role == 'cro') && (
                   <button
                     onClick={() => setIsCreateTicketModalOpen(true)}
                     className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -454,8 +458,25 @@ function App() {
               </div>
             </div>
 
-            <DashboardStatsComponent stats={stats} userRole={currentUser?.role || ''} onTotalTicketsClick={() => setActiveView('tickets')} />
-
+            <DashboardStatsComponent
+              stats={stats}
+              userRole={currentUser?.role || ''}
+              onTotalTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('all'); // Reset status filter
+                setFilterType('all');   // Reset type filter
+              }}
+              onOpenTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('open'); // This will filter to only open tickets
+                setFilterType('all'); // Reset type filter
+              }}
+              onResolvedTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('resolved');
+                setFilterType('all');
+              }}
+            />
             {isExecutive ? (
               <ExecutiveDashboard user={currentUser!} tickets={getVisibleTickets()} escalations={escalations} />
             ) : (
@@ -547,6 +568,8 @@ function App() {
               user={currentUser!}
               assignments={assignments}
               onTicketClick={handleTicketClick}
+              initialFilterStatus={filterStatus} // Pass the filter status
+              initialFilterType={filterType} // Pass the filter type
             />
 
           </div>

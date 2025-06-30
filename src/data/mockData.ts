@@ -459,7 +459,7 @@ export const ticketTypeLabels: Record<TicketType, string> = {
 
 export const roleLabels: Record<UserRole, string> = {
   client: 'Client',
-  sales: 'Sales',
+  sales: 'Sales Head',
   account_manager: 'Account Manager',
   career_associate: 'Career Associate',
   ca_team_lead: 'CA Team Lead',

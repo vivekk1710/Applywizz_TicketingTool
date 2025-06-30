@@ -13,16 +13,19 @@ interface TicketListProps {
   tickets: Ticket[];
   user: User;
   assignments: Record<string, AssignedUser[]>;
+
+  initialFilterStatus?: TicketStatus | 'all'; // New prop
+  initialFilterType?: TicketType | 'all'; // New prop
   onTicketClick: (ticket: Ticket) => void;
 }
 
 
 // export const TicketList: React.FC<TicketListProps> = ({ tickets, user, onTicketClick }) => {
-export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignments, onTicketClick }) => {
+export const TicketList: React.FC<TicketListProps> = ({ tickets, user, assignments, onTicketClick, initialFilterStatus = 'all', initialFilterType = 'all' }) => {
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
-  const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
+  const [filterType, setFilterType] = useState<TicketType | 'all'>(initialFilterType);
+  const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>(initialFilterStatus);
   const [sortBy, setSortBy] = useState<'created' | 'priority' | 'due'>('created');
 
   const filteredTickets = tickets

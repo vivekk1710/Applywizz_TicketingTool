@@ -15,9 +15,11 @@ interface DashboardStatsProps {
   stats: Stats;
   userRole: string;
   onTotalTicketsClick?: () => void;
+  onOpenTicketsClick?: () => void;
+  onResolvedTicketsClick?: () => void;
 }
 
-export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole, onTotalTicketsClick }) => {
+export const DashboardStats: React.FC<DashboardStatsProps> =({ stats, userRole, onTotalTicketsClick, onOpenTicketsClick, onResolvedTicketsClick }) => {
   const isExecutive = ['ceo', 'coo', 'cro'].includes(userRole);
 
   const statCards = [
@@ -37,6 +39,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole,
       color: 'orange',
       change: '+5%',
       show: true,
+      onClick:onOpenTicketsClick
     },
     {
       label: 'Critical Tickets',
@@ -53,6 +56,7 @@ export const DashboardStats: React.FC<DashboardStatsProps> = ({ stats, userRole,
       color: 'green',
       change: '+8%',
       show: true,
+      onClick:onResolvedTicketsClick
     },
     {
       label: 'SLA Breaches',
