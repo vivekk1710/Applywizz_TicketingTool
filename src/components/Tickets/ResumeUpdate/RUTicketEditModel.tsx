@@ -955,6 +955,10 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                 <div>
                   <label className="text-sm font-medium text-gray-500">Created By</label>
                   <p className="text-gray-900">{createdByUser} </p>
+                </div>                
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Ticket Sort Code</label>
+                  <p className="text-gray-900">{ticket.short_code}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Assigned To</label>
