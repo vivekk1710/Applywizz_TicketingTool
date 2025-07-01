@@ -113,6 +113,8 @@ function App() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [pendingClients, setPendingClients] = useState<any[]>([]);
+  const [filterPriority, setFilterPriority] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
+ 
 
   // State to store the clients
   const [clients, setClients] = useState<Client[]>([]);
@@ -465,16 +467,25 @@ function App() {
                 setActiveView('tickets');
                 setFilterStatus('all'); // Reset status filter
                 setFilterType('all');   // Reset type filter
+                setFilterPriority('all');
               }}
               onOpenTicketsClick={() => {
                 setActiveView('tickets');
                 setFilterStatus('open'); // This will filter to only open tickets
                 setFilterType('all'); // Reset type filter
+                setFilterPriority('all');
               }}
               onResolvedTicketsClick={() => {
                 setActiveView('tickets');
                 setFilterStatus('resolved');
                 setFilterType('all');
+                setFilterPriority('all');
+              }}
+              onCriticalTicketsClick={() => {
+                setActiveView('tickets');
+                setFilterStatus('all');
+                setFilterType('all');
+                setFilterPriority('critical');
               }}
             />
             {isExecutive ? (
@@ -570,6 +581,7 @@ function App() {
               onTicketClick={handleTicketClick}
               initialFilterStatus={filterStatus} // Pass the filter status
               initialFilterType={filterType} // Pass the filter type
+              initialFilterPriority={filterPriority} // Pass the filter priority
             />
 
           </div>

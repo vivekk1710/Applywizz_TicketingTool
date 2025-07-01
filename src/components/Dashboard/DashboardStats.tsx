@@ -17,9 +17,10 @@ interface DashboardStatsProps {
   onTotalTicketsClick?: () => void;
   onOpenTicketsClick?: () => void;
   onResolvedTicketsClick?: () => void;
+  onCriticalTicketsClick?: () => void;
 }
 
-export const DashboardStats: React.FC<DashboardStatsProps> =({ stats, userRole, onTotalTicketsClick, onOpenTicketsClick, onResolvedTicketsClick }) => {
+export const DashboardStats: React.FC<DashboardStatsProps> =({ stats, userRole, onTotalTicketsClick, onOpenTicketsClick, onResolvedTicketsClick,onCriticalTicketsClick }) => {
   const isExecutive = ['ceo', 'coo', 'cro'].includes(userRole);
 
   const statCards = [
@@ -48,6 +49,11 @@ export const DashboardStats: React.FC<DashboardStatsProps> =({ stats, userRole, 
       color: 'red',
       change: '-2%',
       show: true,
+      onClick: () => {
+        if (onCriticalTicketsClick) {
+          onCriticalTicketsClick();
+        }
+      }
     },
     {
       label: 'Resolved Today',

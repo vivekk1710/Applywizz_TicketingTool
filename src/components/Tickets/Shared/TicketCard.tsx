@@ -74,23 +74,28 @@ export const TicketCard: React.FC<TicketCardProps> = ({ ticket, onClick }) => {
             <span>{format(new Date(ticket.createdat), 'yyyy-MM-dd')}</span>
           </div>
         </div>
-        {timeUntilDue !== null ? (
-          <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
-            {isOverdue ? (
-              <AlertTriangle className="h-4 w-4" />
+
+        {ticket.status !== 'resolved' ?
+          <>
+            {(timeUntilDue !== null) ? (
+              <div className={`flex items-center space-x-1 ${isOverdue ? 'text-red-600' : 'text-gray-500'}`}>
+                {isOverdue ? (
+                  <AlertTriangle className="h-4 w-4" />
+                ) : (
+                  <Clock className="h-4 w-4" />
+                )}
+                <span className="font-medium">
+                  {isOverdue ? `${hoursRemaining}h overdue` : `${hoursRemaining}h left`}
+                </span>
+              </div>
             ) : (
-              <Clock className="h-4 w-4" />
+              <div className="flex items-center space-x-1 text-gray-400">
+                <Clock className="h-4 w-4" />
+                <span className="font-medium">No due date</span>
+              </div>
             )}
-            <span className="font-medium">
-              {isOverdue ? `${hoursRemaining}h overdue` : `${hoursRemaining}h left`}
-            </span>
-          </div>
-        ) : (
-          <div className="flex items-center space-x-1 text-gray-400">
-            <Clock className="h-4 w-4" />
-            <span className="font-medium">No due date</span>
-          </div>
-        )}
+          </>
+          : null}
 
 
         {ticket.escalationLevel > 0 && (

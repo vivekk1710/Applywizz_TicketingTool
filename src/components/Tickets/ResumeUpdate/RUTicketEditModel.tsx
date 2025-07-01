@@ -975,7 +975,7 @@ export const TicketEditModal: React.FC<TicketEditModalProps> = ({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">Created</label>
-                  <p className="text-gray-900">{format(new Date(ticket.dueDate), 'yyyy-MM-dd hh:mm a')}</p>
+                  <p className="text-gray-900">{format(new Date(ticket.createdat), 'yyyy-MM-dd hh:mm a')}</p>
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-500">SLA Status</label>

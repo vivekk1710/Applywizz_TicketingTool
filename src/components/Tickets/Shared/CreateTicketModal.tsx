@@ -5,7 +5,7 @@ import { rolePermissions, ticketTypeLabels } from '../../../data/mockData';
 import { fetchSLAConfig, SLAConfig } from '../../../services/slaService';
 import { supabase } from '../../../lib/supabaseClient'; // your Supabase client instance
 import { v4 as uuidv4 } from 'uuid';
-
+ 
 interface CreateTicketModalProps {
   user: UserType;
   isOpen: boolean;
@@ -22,8 +22,8 @@ interface Client {
     name: any;
   }[];
 }
-
-
+ 
+ 
 export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   user,
   isOpen,
@@ -41,13 +41,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   const [metadata, setMetadata] = useState<Record<string, any>>({});
   const [slaConfigs, setSlaConfigs] = useState<SLAConfig[]>([])
   const [loading, setLoading] = useState(true)
-  const [isCreated, setIsCreated] = useState(false);
   const [error, setError] = useState<string | null>(null)
   const [selectedClient, setSelectedClient] = useState<Client | null>(null)
-
+ 
   const permissions = rolePermissions[user.role];
   const allowedTicketTypes = permissions.canCreateTickets;
-
+ 
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -73,17 +72,17 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
         setClients(data || []);
       }
     };
-
+ 
     fetchClients();
   }, []);
-
+ 
   useEffect(() => {
     const fetchClientsdata = async () => {
       if (!clientId) return;
       const { data, error } = await supabase
         .from('clients')
         .select(`id,
-           full_name, 
+           full_name,
            job_role_preferences,
           careerassociatemanagerid:careerassociatemanagerid (
     id,
@@ -91,25 +90,25 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
   )`)
         .eq('id', clientId)
         .single(); // Since you're fetching only one row;
-
+ 
       if (error) {
         console.error('Error fetching selected client:', error);
       } else {
         setSelectedClient(data); // You can create a state like const [selectedClient, setSelectedClient] = useState(null)
       }
     };
-
+ 
     fetchClientsdata();
   }, [clientId]);
-
+ 
   if (!isOpen) return null;
-
+ 
   const handleTicketTypeChange = (type: TicketType) => {
     setTicketType(type);
     setTitle(getDefaultTitle(type));
     setMetadata({});
   };
-
+ 
   const getDefaultTitle = (type: TicketType): string => {
     const titles: Record<TicketType, string> = {
       volume_shortfall: 'Volume Shortfall - Applications below expectation',
@@ -126,23 +125,27 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     };
     return titles[type] || '';
   };
-
+ 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsCreated(true);
     if (!user) {
       alert('You must be logged in to submit a ticket');
       return;
     }
-
-    console.log("Logged in user:", user);
-    console.log("User ID:", user.id);
-
+ 
     // Validate required fields
     if (!ticketType || !title || !description) {
       alert("Please fill in all required fields.");
       return;
     }
+ 
+    // Get the correct SLA config for this ticket type
+    const slaConfig = getSLAForTicketType(ticketType);
+    if (!slaConfig) {
+      alert("Could not find SLA configuration for this ticket type.");
+      return;
+    }
+ 
     const calculateDueDate = (hours: number) => {
       const now = new Date();
       now.setHours(now.getHours() + hours);
@@ -152,32 +155,30 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     const isoNow = now.toISOString();
     // Build the ticket data
     const newTicket = {
-      id: uuidv4(), // optional, Supabase can auto-generate if preferred
+      id: uuidv4(),
       type: ticketType,
       title,
       description,
-      clientId: clientId || null,//clientId || null,
-      createdby: user.id, // assuming `user` is from auth/session/context
-      priority: slaConfigs[0].priority,
-      status: 'open', // new tickets are usually marked as open
-      sla_hours: slaConfigs[0].hours,
-      // createdat: isoNow,
+      clientId: clientId || null,
+      createdby: user.id,
+      priority: slaConfig.priority, // Fixed: Now uses correct priority
+      status: 'open',
+      sla_hours: slaConfig.hours, // Fixed: Now uses correct hours
       updatedAt: isoNow,
-      // due_date: ticketData.due_date || isoNow,
-      dueDate: calculateDueDate(slaConfigs[0].hours), // custom function
+      dueDate: calculateDueDate(slaConfig.hours), // Fixed: Now uses correct hours
       escalation_level: 0,
-      metadata: JSON.stringify(metadata), // convert JS object to JSON
+      metadata: JSON.stringify(metadata),
       comments: JSON.stringify([]),
     };
-
+ 
     // Send to Supabase
-
+ 
     const { error: ticketError } = await supabase
       .from('tickets')
       .insert(newTicket)
       .select('id')
       .single();
-
+ 
     if (ticketError) {
       console.error("Supabase insert error:", ticketError);
       alert("Failed to create ticket.");
@@ -195,19 +196,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           notes: description,
           forwarded_to_ca_scraping: false
         }]);
-
+ 
       if (vsError) {
         console.error("Failed to insert volume shortfall fields", vsError.message);
         alert("Failed to save volume shortfall-specific data.");
         return;
       }
     }
-    setIsCreated(false);
     alert("Ticket created successfully!");
     onClose();
     onTicketCreated();
-
-
+ 
+ 
     // Reset form
     setTicketType('');
     setClientId('');
@@ -217,7 +217,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     setMetadata({});
     onClose();
   };
-
+ 
   const renderTicketSpecificFields = () => {
     switch (ticketType) {
       case 'credential_issue':
@@ -232,6 +232,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setMetadata({ ...metadata, issueType: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
+                title="Credential Issue Type"
               >
                 <option value="">Select issue type</option>
                 <option value="password_changed">Password Changed</option>
@@ -249,16 +250,18 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 value={metadata.lastAccess || ''}
                 onChange={(e) => setMetadata({ ...metadata, lastAccess: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                title="Enter the last successful access date and time"
+                placeholder="YYYY-MM-DDThh:mm"
               />
             </div>
           </div>
         );
-
+ 
       case 'volume_shortfall':
         return (
           <div className="space-y-4">
             <>
-
+ 
               {getCAMInfo()}</>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -298,11 +301,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setMetadata({ ...metadata, timePeriod: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
+                title="Select the time period"
+                placeholder="YYYY-MM-DD"
               />
             </div>
           </div>
         );
-
+ 
       case 'job_feed_empty':
         return (
           <div className="space-y-4">
@@ -352,11 +357,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 value={metadata.lastJobFound || ''}
                 onChange={(e) => setMetadata({ ...metadata, lastJobFound: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                title="Select the time period"
+                placeholder="YYYY-MM-DD"
               />
             </div>
           </div>
         );
-
+ 
       case 'profile_data_issue':
         return (
           <div className="space-y-4">
@@ -369,6 +376,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setMetadata({ ...metadata, incorrectField: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
+                aria-label="Incorrect Field"
               >
                 <option value="">Select field</option>
                 <option value="job_role">Job Role</option>
@@ -388,6 +396,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   onChange={(e) => setMetadata({ ...metadata, currentValue: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Current incorrect value"
+                  title="Enter the current incorrect value"
                 />
               </div>
               <div>
@@ -400,12 +409,13 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                   onChange={(e) => setMetadata({ ...metadata, correctValue: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                   placeholder="Correct value"
+                  title="Enter the correct value"
                 />
               </div>
             </div>
           </div>
         );
-
+ 
       case 'am_not_responding':
         return (
           <div className="space-y-4">
@@ -419,6 +429,8 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setMetadata({ ...metadata, onboardingDate: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
+                title="Select the onboarding date"
+                placeholder="YYYY-MM-DD"
               />
             </div>
             <div>
@@ -431,6 +443,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setMetadata({ ...metadata, assignedAM: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="Account Manager Name"
+                title="Enter the assigned Account Manager's name"
                 required
               />
             </div>
@@ -449,21 +462,28 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
             </div>
           </div>
         );
-
+ 
       default:
         return null;
     }
   };
-
+ 
+  const getSLAForTicketType = (type: TicketType | '') => {
+    if (!type) return null;
+    return slaConfigs.find(config => config.ticket_type === type);
+  };
+ 
   const getSLAInfo = () => {
     if (!ticketType) return null;
-    const sla = slaConfigs[0].ticket_type;
+    const slaConfig = getSLAForTicketType(ticketType);
+    if (!slaConfig) return null;
+ 
     return (
       <div className="flex items-center space-x-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <Clock className="h-5 w-5 text-blue-600" />
         <div className="text-sm">
-          <span className="font-medium text-blue-900">SLA: {slaConfigs[0].hours} hours</span>
-          <span className="text-blue-700 ml-2">Priority: {slaConfigs[0].priority.toUpperCase()}</span>
+          <span className="font-medium text-blue-900">SLA: {slaConfig.hours} hours</span>
+          <span className="text-blue-700 ml-2">Priority: {slaConfig.priority.toUpperCase()}</span>
         </div>
       </div>
     );
@@ -474,7 +494,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       <div className="flex items-center space-x-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="text-sm">
           <span className="font-medium text-blue-900">Client : {selectedClient.full_name} has </span>
-          <span className="text-blue-700 ml-2">CA Team Lead : {selectedClient.careerassociatemanagerid.name || 'Not assigned'}</span>
+          <span className="text-blue-700 ml-2">CA Team Lead : {(selectedClient.careerassociatemanagerid[0]?.name) || 'Not assigned'}</span>
         </div>
       </div>
     )
@@ -490,11 +510,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            title="Close"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
-
+ 
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Client Selection - for roles that can select clients */}
           {(user.role === 'account_manager' || user.role === 'sales') && (
@@ -507,20 +528,21 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 onChange={(e) => setClientId(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 required
+                title="Select Client"
               >
                 <option value="">Choose a client</option>
                 {clients.map(client => (
-
+ 
                   <option key={client.id} value={client.id}>
                     {client.full_name} - {(client.job_role_preferences || []).join(', ')}
                   </option>
-
+ 
                 ))}
                 { }
               </select>
             </div>
           )}
-
+ 
           {/* Ticket Type Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -531,6 +553,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               onChange={(e) => handleTicketTypeChange(e.target.value as TicketType)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
               required
+              aria-label="Ticket Type"
             >
               <option value="">Select ticket type</option>
               {allowedTicketTypes.map(type => (
@@ -539,7 +562,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </option>
               ))}
             </select>
-
+ 
             {/* Role-specific restrictions notice */}
             {user.role === 'career_associate' && (
               <div className="mt-2 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
@@ -548,7 +571,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
                 </p>
               </div>
             )}
-
+ 
             {user.role === 'sales' && (
               <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-sm text-blue-800">
@@ -557,10 +580,10 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </div>
             )}
           </div>
-
+ 
           {/* SLA Information */}
           {getSLAInfo()}
-
+ 
           {/* Title */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -575,7 +598,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               required
             />
           </div>
-
+ 
           {/* Description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -590,12 +613,12 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               required
             />
           </div>
-
+ 
           {/* Ticket-specific fields */}
           {renderTicketSpecificFields()}
-
-          {/* Urgency for critical issues */}
-          {ticketType && slaConfigs[0].priority === 'critical' && (
+ 
+          {/* Urgency for critical issues - NOW USING CORRECT PRIORITY CHECK */}
+          {ticketType && getSLAForTicketType(ticketType)?.priority === 'critical' && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Urgency Justification
@@ -614,7 +637,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               </div>
             </div>
           )}
-
+ 
           {/* Submit Buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200">
             <button
@@ -628,7 +651,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors"
             >
-              {isCreated ? ' Creating Ticket... ' : 'Create Ticket'}
+              Create Ticket
             </button>
           </div>
         </form>
@@ -636,3 +659,4 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
     </div>
   );
 };
+ 
