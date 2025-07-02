@@ -22,6 +22,9 @@ import EmailConfirmed from './components/Auth/EmailConfirmed';
 import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AppLayout from './components/Layout/AppLayout';
+import ProtectedRoute from './components/Auth/ProtectedRoute';
+
 
 
 
@@ -910,73 +913,48 @@ function App() {
           <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
           <Route path="/LinkExpired" element={<LinkExpired />} />
           <Route path="/EmailConfirmed" element={<EmailConfirmed />} />
-          <Route path="/vivek" element={<><h1>Welcome to Vivek's Page</h1></>} />
           {/* Login route */}
           <Route
             path="/login"
-            element={!currentUser
-              ? <LoginForm onLogin={handleLogin} />
-              : <Navigate to="/" replace />}
+            element={
+              !currentUser
+                ? (<LoginForm onLogin={handleLogin} />)
+                : (<Navigate to="/" replace />)
+            }
           />
           {/* Protected main app routes */}
           <Route
             path="/*"
             element={
-              currentUser ? (
-                <div className="min-h-screen bg-gray-50">
-                  <Navbar user={currentUser} onLogout={handleLogout} />
-                  <div className="flex">
-                    <Sidebar
-                      user={currentUser}
-                      activeView={activeView}
-                      onViewChange={setActiveView}
-                    />
-                    <main className="flex-1 p-8">
-                      {renderMainContent()}
-                    </main>
-                  </div>
-                  {/* Modals (keep existing modal code) */}
-                  <CreateTicketModal
-                    user={currentUser}
-                    isOpen={isCreateTicketModalOpen}
-                    onClose={() => setIsCreateTicketModalOpen(false)}
-                    onSubmit={handleCreateTicket}
-                    onTicketCreated={fetchData}
-                  />
-
-                  {renderTicketEditModal(selectedTicket, "edit")}
-
-                  <ClientOnboardingModal
-                    user={currentUser}
-                    isOpen={isClientOnboardingModalOpen}
-                    onClose={() => setIsClientOnboardingModalOpen(false)}
-                    onClientOnboarded={fetchData}
-                  />
-
-                  <ClientEditModal
-                    client={selectedClient}
-                    isOpen={isClientEditModalOpen}
-                    currentUserRole={currentUser.role}
-                    onClose={() => {
-                      setIsClientEditModalOpen(false);
-                      setSelectedClient(null);
-                    }}
-                    onSubmit={handleUpdateClient}
-                  />
-
-                  <UserManagementModal
-                    isOpen={isUserManagementModalOpen}
-                    onClose={() => setIsUserManagementModalOpen(false)}
-                    onUpdateUser={handleUpdateUser}
-                    onDeleteUser={handleDeleteUser}
-                  />
-
-                </div>
-              ) : (
-                <Navigate to="/login" replace />
-              )
+              <ProtectedRoute currentUser={currentUser}>
+                <AppLayout
+                  currentUser={currentUser}
+                  activeView={activeView}
+                  setActiveView={setActiveView}
+                  renderMainContent={renderMainContent}
+                  renderTicketEditModal={renderTicketEditModal}
+                  isCreateTicketModalOpen={isCreateTicketModalOpen}
+                  setIsCreateTicketModalOpen={setIsCreateTicketModalOpen}
+                  isClientOnboardingModalOpen={isClientOnboardingModalOpen}
+                  setIsClientOnboardingModalOpen={setIsClientOnboardingModalOpen}
+                  isClientEditModalOpen={isClientEditModalOpen}
+                  setIsClientEditModalOpen={setIsClientEditModalOpen}
+                  isUserManagementModalOpen={isUserManagementModalOpen}
+                  setIsUserManagementModalOpen={setIsUserManagementModalOpen}
+                  selectedTicket={selectedTicket}
+                  selectedClient={selectedClient}
+                  setSelectedClient={setSelectedClient}
+                  handleLogout={handleLogout}
+                  handleCreateTicket={handleCreateTicket}
+                  handleUpdateClient={handleUpdateClient}
+                  handleUpdateUser={handleUpdateUser}
+                  handleDeleteUser={handleDeleteUser}
+                  fetchData={fetchData}
+                />
+              </ProtectedRoute>
             }
           />
+
         </Routes>
       </BrowserRouter>
     </DialogProvider>
