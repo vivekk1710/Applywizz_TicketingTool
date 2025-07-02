@@ -935,8 +935,41 @@ function App() {
                     </main>
                   </div>
                   {/* Modals (keep existing modal code) */}
-                  
-                  
+                  <CreateTicketModal
+                    user={currentUser}
+                    isOpen={isCreateTicketModalOpen}
+                    onClose={() => setIsCreateTicketModalOpen(false)}
+                    onSubmit={handleCreateTicket}
+                    onTicketCreated={fetchData}
+                  />
+
+                  {renderTicketEditModal(selectedTicket, "edit")}
+
+                  <ClientOnboardingModal
+                    user={currentUser}
+                    isOpen={isClientOnboardingModalOpen}
+                    onClose={() => setIsClientOnboardingModalOpen(false)}
+                    onClientOnboarded={fetchData}
+                  />
+
+                  <ClientEditModal
+                    client={selectedClient}
+                    isOpen={isClientEditModalOpen}
+                    currentUserRole={currentUser.role}
+                    onClose={() => {
+                      setIsClientEditModalOpen(false);
+                      setSelectedClient(null);
+                    }}
+                    onSubmit={handleUpdateClient}
+                  />
+
+                  <UserManagementModal
+                    isOpen={isUserManagementModalOpen}
+                    onClose={() => setIsUserManagementModalOpen(false)}
+                    onUpdateUser={handleUpdateUser}
+                    onDeleteUser={handleDeleteUser}
+                  />
+
                 </div>
               ) : (
                 <Navigate to="/login" replace />
