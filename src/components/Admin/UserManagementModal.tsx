@@ -119,26 +119,69 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
 
   
-  const onCreateUser = async (userData: any) => {
+//   const onCreateUser = async (userData: any) => {
+//   try {
+//     // ✅ Step 1: Create Supabase Auth user + send email verification
+//     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+//       email: userData.email,
+//       password: userData.password,
+//       options: {
+//         emailRedirectTo: "https://applywizzcrm.vercel.app/email-verify-redirect", // ✅ Set your confirmed page
+//         data: {
+//           name: userData.name,
+//           role: userData.role,
+//           department: userData.department
+//         }
+//       }
+//     });
+ 
+//     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+//     const authUserId = signUpData.user?.id;
+//     if (!authUserId) throw new Error("No auth user ID returned");
+ 
+//     // ✅ Step 2: Insert into public.users (linked by authUserId)
+//     const { error: insertError } = await supabase.from("users").insert({
+//       id: authUserId,
+//       name: userData.name,
+//       email: userData.email,
+//       role: userData.role,
+//       department: userData.department,
+//       is_active: userData.isActive
+//     });
+ 
+//     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
+ 
+//     return true;
+//   } catch (error: any) {
+//     console.error("User creation failed:", error);
+//     setError(`User creation failed: ${error.message}`);
+//     return false;
+//   }
+// };
+ 
+
+const onCreateUser = async (userData: any) => {
   try {
+    const redirectUrl = `https://applywizzcrm.vercel.app/email-verify-redirect?email=${encodeURIComponent(userData.email)}`;
+
     // ✅ Step 1: Create Supabase Auth user + send email verification
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
       options: {
-        emailRedirectTo: "https://applywizzcrm.vercel.app/emailConfirmed", // ✅ Set your confirmed page
+        emailRedirectTo: redirectUrl, // ✅ now includes the email in query params
         data: {
           name: userData.name,
           role: userData.role,
-          department: userData.department
-        }
-      }
+          department: userData.department,
+        },
+      },
     });
- 
+
     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
     const authUserId = signUpData.user?.id;
     if (!authUserId) throw new Error("No auth user ID returned");
- 
+
     // ✅ Step 2: Insert into public.users (linked by authUserId)
     const { error: insertError } = await supabase.from("users").insert({
       id: authUserId,
@@ -146,11 +189,11 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       email: userData.email,
       role: userData.role,
       department: userData.department,
-      is_active: userData.isActive
+      is_active: userData.isActive,
     });
- 
+
     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
- 
+
     return true;
   } catch (error: any) {
     console.error("User creation failed:", error);
@@ -158,7 +201,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     return false;
   }
 };
- 
+
  
 
 
