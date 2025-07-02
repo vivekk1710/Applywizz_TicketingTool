@@ -21,6 +21,7 @@ import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
 import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
+import { BrowserRouter as Router, Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
 
 
 
@@ -816,76 +817,132 @@ function App() {
         );
     }
   };
-  if (window.location.pathname === "/EmailConfirmed") {
-    return <EmailConfirmed />;
-  }
+  // if (window.location.pathname === "/EmailConfirmed") {
+  //   return <EmailConfirmed />;
+  // }
 
-  if (window.location.pathname === "/LinkExpired") {
-    return <LinkExpired />;
-  }
+  // if (window.location.pathname === "/LinkExpired") {
+  //   return <LinkExpired />;
+  // }
 
-  if (window.location.pathname === "/email-verify-redirect") {
-    return <EmailVerifyRedirect />;
-  }
+  // if (window.location.pathname === "/email-verify-redirect") {
+  //   return <EmailVerifyRedirect />;
+  // }
 
-  if (!currentUser) {
-    return <LoginForm onLogin={handleLogin} />;
-  }
+  // if (!currentUser) {
+  //   return <LoginForm onLogin={handleLogin} />;
+  // }
 
 
 
   return (
+    //   <DialogProvider>
+    //     <Router>
+    //       <Routes>
+    //         {/* Add this route configuration */}
+    //         <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
+    //         <Route path="/LinkExpired" element={<LinkExpired />} />
+    //         <Route path="/EmailConfirmed" element={<EmailConfirmed />} />
+    //         {/* Add your other routes here
+    //         <Route path="/" element={<Home />} />
+    //         <Route path="/login" element={<Login />} /> */}
+    //         {/* ... other routes */}
+
+    //       </Routes>
+    //     </Router>
+
+    //     <div className="min-h-screen bg-gray-50">
+    //       <Navbar user={currentUser} onLogout={handleLogout} />
+
+    //       <div className="flex">
+    //         <Sidebar
+    //           user={currentUser}
+    //           activeView={activeView}
+    //           onViewChange={setActiveView}
+    //         />
+
+    //         <main className="flex-1 p-8">
+    //           {renderMainContent()}
+    //         </main>
+    //       </div>
+
+    //       <CreateTicketModal
+    //         user={currentUser}
+    //         isOpen={isCreateTicketModalOpen}
+    //         onClose={() => setIsCreateTicketModalOpen(false)}
+    //         onSubmit={handleCreateTicket}
+    //         onTicketCreated={fetchData}
+    //       />
+
+    //       {renderTicketEditModal(selectedTicket, "edit")}
+
+    //       <ClientOnboardingModal
+    //         user={currentUser}
+    //         isOpen={isClientOnboardingModalOpen}
+    //         onClose={() => setIsClientOnboardingModalOpen(false)}
+    //         onClientOnboarded={fetchData}
+    //       />
+
+    //       <ClientEditModal
+    //         client={selectedClient}
+    //         isOpen={isClientEditModalOpen}
+    //         currentUserRole={currentUser.role}
+    //         onClose={() => {
+    //           setIsClientEditModalOpen(false);
+    //           setSelectedClient(null);
+    //         }}
+    //         onSubmit={handleUpdateClient}
+    //       />
+
+    //       <UserManagementModal
+    //         isOpen={isUserManagementModalOpen}
+    //         onClose={() => setIsUserManagementModalOpen(false)}
+    //         onUpdateUser={handleUpdateUser}
+    //         onDeleteUser={handleDeleteUser}
+    //       />
+    //     </div>
+    //   </DialogProvider>
+    // );
     <DialogProvider>
-      <div className="min-h-screen bg-gray-50">
-        <Navbar user={currentUser} onLogout={handleLogout} />
-
-        <div className="flex">
-          <Sidebar
-            user={currentUser}
-            activeView={activeView}
-            onViewChange={setActiveView}
+      <BrowserRouter>
+        <Routes>
+          {/* Public auth routes */}
+          <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
+          <Route path="/LinkExpired" element={<LinkExpired />} />
+          <Route path="/EmailConfirmed" element={<EmailConfirmed />} />
+          {/* Login route */}
+          <Route
+            path="/login"
+            element={!currentUser
+              ? <LoginForm onLogin={handleLogin} />
+              : <Navigate to="/" replace />}
           />
-
-          <main className="flex-1 p-8">
-            {renderMainContent()}
-          </main>
-        </div>
-
-        <CreateTicketModal
-          user={currentUser}
-          isOpen={isCreateTicketModalOpen}
-          onClose={() => setIsCreateTicketModalOpen(false)}
-          onSubmit={handleCreateTicket}
-          onTicketCreated={fetchData}
-        />
-
-        {renderTicketEditModal(selectedTicket, "edit")}
-
-        <ClientOnboardingModal
-          user={currentUser}
-          isOpen={isClientOnboardingModalOpen}
-          onClose={() => setIsClientOnboardingModalOpen(false)}
-          onClientOnboarded={fetchData}
-        />
-
-        <ClientEditModal
-          client={selectedClient}
-          isOpen={isClientEditModalOpen}
-          currentUserRole={currentUser.role}
-          onClose={() => {
-            setIsClientEditModalOpen(false);
-            setSelectedClient(null);
-          }}
-          onSubmit={handleUpdateClient}
-        />
-
-        <UserManagementModal
-          isOpen={isUserManagementModalOpen}
-          onClose={() => setIsUserManagementModalOpen(false)}
-          onUpdateUser={handleUpdateUser}
-          onDeleteUser={handleDeleteUser}
-        />
-      </div>
+          {/* Protected main app routes */}
+          <Route
+            path="/*"
+            element={
+              currentUser ? (
+                <div className="min-h-screen bg-gray-50">
+                  <Navbar user={currentUser} onLogout={handleLogout} />
+                  <div className="flex">
+                    <Sidebar
+                      user={currentUser}
+                      activeView={activeView}
+                      onViewChange={setActiveView}
+                    />
+                    <main className="flex-1 p-8">
+                      {renderMainContent()}
+                    </main>
+                  </div>
+                  {/* Modals (keep existing modal code) */}
+                </div>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+        </Routes>
+      </BrowserRouter>
     </DialogProvider>
   );
 }

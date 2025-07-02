@@ -25,7 +25,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<UserRole | 'all'>('all');
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -48,10 +48,10 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
       const { data: userData, error: userError } = await supabaseAdmin
         .from('users')
         .select('*')
-        // .order('created_at', { ascending: false });
-      
+      // .order('created_at', { ascending: false });
+
       if (userError) throw userError;
-      
+
       setUsers(userData || []);
     } catch (error) {
       console.error('Error fetching users:', error);
@@ -118,143 +118,125 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
   // };
 
 
-  
-//   const onCreateUser = async (userData: any) => {
-//   try {
-//     // ✅ Step 1: Create Supabase Auth user + send email verification
-//     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-//       email: userData.email,
-//       password: userData.password,
-//       options: {
-//         emailRedirectTo: "https://applywizzcrm.vercel.app/email-verify-redirect", // ✅ Set your confirmed page
-//         data: {
-//           name: userData.name,
-//           role: userData.role,
-//           department: userData.department
-//         }
-//       }
-//     });
- 
-//     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
-//     const authUserId = signUpData.user?.id;
-//     if (!authUserId) throw new Error("No auth user ID returned");
- 
-//     // ✅ Step 2: Insert into public.users (linked by authUserId)
-//     const { error: insertError } = await supabase.from("users").insert({
-//       id: authUserId,
-//       name: userData.name,
-//       email: userData.email,
-//       role: userData.role,
-//       department: userData.department,
-//       is_active: userData.isActive
-//     });
- 
-//     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
- 
-//     return true;
-//   } catch (error: any) {
-//     console.error("User creation failed:", error);
-//     setError(`User creation failed: ${error.message}`);
-//     return false;
-//   }
-// };
- 
 
-// const onCreateUser = async (userData: any) => {
-//   try {
-//     const redirectUrl = `https://applywizzcrm.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
+  //   const onCreateUser = async (userData: any) => {
+  //   try {
+  //     // ✅ Step 1: Create Supabase Auth user + send email verification
+  //     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       options: {
+  //         emailRedirectTo: "https://applywizzcrm.vercel.app/email-verify-redirect", // ✅ Set your confirmed page
+  //         data: {
+  //           name: userData.name,
+  //           role: userData.role,
+  //           department: userData.department
+  //         }
+  //       }
+  //     });
 
-//     // ✅ Step 1: Create Supabase Auth user + send email verification
-//     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-//       email: userData.email,
-//       password: userData.password,
-//       options: {
-//         emailRedirectTo: redirectUrl, // ✅ now includes the email in query params
-//         data: {
-//           name: userData.name,
-//           role: userData.role,
-//           department: userData.department,
-//         },
-//       },
-//     });
+  //     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+  //     const authUserId = signUpData.user?.id;
+  //     if (!authUserId) throw new Error("No auth user ID returned");
 
-//     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
-//     const authUserId = signUpData.user?.id;
-//     if (!authUserId) throw new Error("No auth user ID returned");
+  //     // ✅ Step 2: Insert into public.users (linked by authUserId)
+  //     const { error: insertError } = await supabase.from("users").insert({
+  //       id: authUserId,
+  //       name: userData.name,
+  //       email: userData.email,
+  //       role: userData.role,
+  //       department: userData.department,
+  //       is_active: userData.isActive
+  //     });
 
-//     // ✅ Step 2: Insert into public.users (linked by authUserId)
-//     const { error: insertError } = await supabase.from("users").insert({
-//       id: authUserId,
-//       name: userData.name,
-//       email: userData.email,
-//       role: userData.role,
-//       department: userData.department,
-//       is_active: userData.isActive,
-//     });
+  //     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
 
-//     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
+  //     return true;
+  //   } catch (error: any) {
+  //     console.error("User creation failed:", error);
+  //     setError(`User creation failed: ${error.message}`);
+  //     return false;
+  //   }
+  // };
 
-//     return true;
-//   } catch (error: any) {
-//     console.error("User creation failed:", error);
-//     setError(`User creation failed: ${error.message}`);
-//     return false;
-//   }
-// };
 
-const onCreateUser = async (userData: any) => {
-  try {
-    const redirectUrl = `https://applywizz-ticketing-tool.vercel.app/email-verify-redirect?email=${encodeURIComponent(userData.email)}`;
+  // const onCreateUser = async (userData: any) => {
+  //   try {
+  //     const redirectUrl = `https://applywizzcrm.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
 
-    // ✅ Step 1: Create Supabase Auth user + send email verification
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: userData.email,
-      password: userData.password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          name: userData.name,
-          role: userData.role,
-          department: userData.department
+  //     // ✅ Step 1: Create Supabase Auth user + send email verification
+  //     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       options: {
+  //         emailRedirectTo: redirectUrl, // ✅ now includes the email in query params
+  //         data: {
+  //           name: userData.name,
+  //           role: userData.role,
+  //           department: userData.department,
+  //         },
+  //       },
+  //     });
+
+  //     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+  //     const authUserId = signUpData.user?.id;
+  //     if (!authUserId) throw new Error("No auth user ID returned");
+
+  //     // ✅ Step 2: Insert into public.users (linked by authUserId)
+  //     const { error: insertError } = await supabase.from("users").insert({
+  //       id: authUserId,
+  //       name: userData.name,
+  //       email: userData.email,
+  //       role: userData.role,
+  //       department: userData.department,
+  //       is_active: userData.isActive,
+  //     });
+
+  //     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
+
+  //     return true;
+  //   } catch (error: any) {
+  //     console.error("User creation failed:", error);
+  //     setError(`User creation failed: ${error.message}`);
+  //     return false;
+  //   }
+  // };
+
+
+  const onCreateUser = async (userData: any) => {
+    try {
+      // ✅ 1. Build verification URL with email parameter
+      const redirectUrl = `https://applywizz-ticketing-tool.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
+
+      // ✅ 2. Sign up user with redirect
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email: userData.email,
+        password: userData.password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            name: userData.name,
+            role: userData.role,
+            department: userData.department
+          }
         }
-      }
-    });
+      });
 
-    if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+      if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
 
-    const authId = signUpData.user?.id;
-    if (!authId) throw new Error("User ID not returned");
+      // ✅ 3. Store email for fallback
+      localStorage.setItem("applywizz_user_email", userData.email);
 
-    // ✅ Optional: wait for auth.users insert (only if race condition happens)
-    await new Promise((res) => setTimeout(res, 1500));
-
-    // ✅ Step 2: Insert into public.users table
-    const { error: insertError } = await supabase.from("users").insert({
-      id: authId,
-      name: userData.name,
-      email: userData.email,
-      role: userData.role,
-      department: userData.department,
-      is_active: userData.isActive,
-    });
-
-    if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
-
-    // ✅ Store fallback email
-    localStorage.setItem("applywizz_user_email", userData.email);
-
-    return true;
-  } catch (error: any) {
-    console.error("User creation failed:", error);
-    setError(`User creation failed: ${error.message}`);
-    sessionStorage.removeItem("signup_email");
-    localStorage.removeItem("applywizz_user_email");
-    return false;
-  }
-};
+      return true;
+    } catch (error: any) {
+      console.error("User creation failed:", error);
+      setError(`User creation failed: ${error.message}`);
+      return false;
+    }
+  };
 
 
- 
+
 
 
   const handleCreateUser = async (e: React.FormEvent) => {
@@ -444,7 +426,7 @@ const onCreateUser = async (userData: any) => {
           <strong>Error:</strong> {error}
         </div>
       )}
-      
+
       <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
         <div className="flex items-center space-x-2 mb-4">
           <User className="h-5 w-5 text-blue-600" />

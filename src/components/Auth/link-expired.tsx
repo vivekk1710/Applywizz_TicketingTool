@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '@/lib/supabaseClient';
 
-export default function LinkExpired(){
+export default function LinkExpired() {
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -21,25 +21,49 @@ export default function LinkExpired(){
     }
   }, []);
 
+  // const handleResend = async () => {
+  //   if (!email) return alert("Email not found");
+  //   setLoading(true);
+  //   try {
+  //     const { error } = await supabase.auth.resend({
+  //       type: "signup",
+  //       email,
+  //       options: {
+  //         emailRedirectTo: "https://applywizz-ticketing-tool.vercel.app/EmailConfirmed",
+  //       },
+  //     });
+  //     if (error) throw error;
+
+  //     alert("✅ Verification link resent");
+  //     setTimeout(() => {
+  //       navigate("/EmailVerifyRedirect?email=" + encodeURIComponent(email));
+  //     }, 2000);
+  //   } catch (err: any) {
+  //     alert("❌ " + err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
   const handleResend = async () => {
-    if (!email) return alert("Email not found");
+    if (!email) return;
+
     setLoading(true);
     try {
+      // ✅ Resend verification with same redirect format
+      const redirectUrl = `https://yourdomain.com/EmailVerifyRedirect?email=${encodeURIComponent(email)}`;
+
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
-        options: {
-          emailRedirectTo: "https://applywizz-ticketing-tool.vercel.app/EmailConfirmed",
-        },
+        options: { emailRedirectTo: redirectUrl }
       });
+
       if (error) throw error;
 
-      alert("✅ Verification link resent");
-      setTimeout(() => {
-        navigate("/EmailVerifyRedirect?email=" + encodeURIComponent(email));
-      }, 2000);
+      alert("Verification email resent!");
+      setTimeout(() => navigate("/"), 2000);
     } catch (err: any) {
-      alert("❌ " + err.message);
+      alert("Error resending email: " + err.message);
     } finally {
       setLoading(false);
     }
