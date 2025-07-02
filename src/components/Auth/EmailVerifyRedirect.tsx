@@ -10,33 +10,42 @@ const EmailVerifyRedirect = () => {
 
     useEffect(() => {
         const checkVerification = async () => {
-            // 1. Extract the FRAGMENT (part after #)
-            const fragment = window.location.hash.substring(1); // Remove the "#"
-            const fragmentParams = new URLSearchParams(fragment);
-            console.log("Fragment:", window.location.hash);
+            const href = window.location.href;
+            const hash = window.location.hash;
 
-            // 2. Get token + type from FRAGMENT
-            const access_token = fragmentParams.get("access_token");
-            const type = fragmentParams.get("type");
+            const emailMatch = href.match(/email=([^&#]+)/);
+            const email = emailMatch ? decodeURIComponent(emailMatch[1]) : null;
 
-            // 3. Get email from query string (part after ?)
-            const queryParams = new URLSearchParams(window.location.search);
-            const email = queryParams.get("email");
+            if (email) {
+                localStorage.setItem("applywizz_user_email", email);
+                sessionStorage.setItem("signup_email", email);
+            }
 
-            // 4. Verify token with Supabase
-            if (email && access_token && type === "email") {
+            // wait 2 seconds before verifying
+            await new Promise((res) => setTimeout(res, 2000));
+
+            try {
+                const token_hash = new URLSearchParams(window.location.search).get("token_hash");
+                const type = new URLSearchParams(window.location.search).get("type");
+
+                if (!email || !token_hash || type !== "email") {
+                    navigate("/LinkExpired");
+                    return;
+                }
+
                 const { data, error } = await supabase.auth.verifyOtp({
                     type: "email",
-                    token: access_token, // Use "token" (not token_hash)
-                    email,
+                    token_hash,
+                    email
                 });
 
-                if (data.user) {
-                    navigate("/EmailConfirmed?email=" + encodeURIComponent(email));
-                } else {
+                if (error || !data.user) {
                     navigate("/LinkExpired");
+                    return;
                 }
-            } else {
+
+                navigate("/EmailConfirmed?email=" + encodeURIComponent(email));
+            } catch (err) {
                 navigate("/LinkExpired");
             }
         };
