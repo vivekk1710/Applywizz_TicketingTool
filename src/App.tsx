@@ -19,7 +19,7 @@ import { supabase } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
 import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
-import LinkExpired from './components/Auth/LinkExpired';
+import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
 
 

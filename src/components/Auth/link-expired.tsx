@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from '@/lib/supabaseClient';
 
-const LinkExpired = () => {
+export default function LinkExpired(){
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -72,4 +72,4 @@ const LinkExpired = () => {
   );
 };
 
-export default LinkExpired;
+// export default LinkExpired;
