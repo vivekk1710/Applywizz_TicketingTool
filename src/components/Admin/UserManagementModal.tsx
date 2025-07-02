@@ -160,31 +160,77 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 // };
  
 
+// const onCreateUser = async (userData: any) => {
+//   try {
+//     const redirectUrl = `https://applywizzcrm.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
+
+//     // ✅ Step 1: Create Supabase Auth user + send email verification
+//     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+//       email: userData.email,
+//       password: userData.password,
+//       options: {
+//         emailRedirectTo: redirectUrl, // ✅ now includes the email in query params
+//         data: {
+//           name: userData.name,
+//           role: userData.role,
+//           department: userData.department,
+//         },
+//       },
+//     });
+
+//     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+//     const authUserId = signUpData.user?.id;
+//     if (!authUserId) throw new Error("No auth user ID returned");
+
+//     // ✅ Step 2: Insert into public.users (linked by authUserId)
+//     const { error: insertError } = await supabase.from("users").insert({
+//       id: authUserId,
+//       name: userData.name,
+//       email: userData.email,
+//       role: userData.role,
+//       department: userData.department,
+//       is_active: userData.isActive,
+//     });
+
+//     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
+
+//     return true;
+//   } catch (error: any) {
+//     console.error("User creation failed:", error);
+//     setError(`User creation failed: ${error.message}`);
+//     return false;
+//   }
+// };
+
 const onCreateUser = async (userData: any) => {
   try {
-    const redirectUrl = `https://applywizzcrm.vercel.app/EmailVerifyRedirect?email=${encodeURIComponent(userData.email)}`;
+    const redirectUrl = `https://applywizzcrm.vercel.app/email-verify-redirect?email=${encodeURIComponent(userData.email)}`;
 
     // ✅ Step 1: Create Supabase Auth user + send email verification
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
       email: userData.email,
       password: userData.password,
       options: {
-        emailRedirectTo: redirectUrl, // ✅ now includes the email in query params
+        emailRedirectTo: redirectUrl,
         data: {
           name: userData.name,
           role: userData.role,
-          department: userData.department,
-        },
-      },
+          department: userData.department
+        }
+      }
     });
 
     if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
-    const authUserId = signUpData.user?.id;
-    if (!authUserId) throw new Error("No auth user ID returned");
 
-    // ✅ Step 2: Insert into public.users (linked by authUserId)
+    const authId = signUpData.user?.id;
+    if (!authId) throw new Error("User ID not returned");
+
+    // ✅ Optional: wait for auth.users insert (only if race condition happens)
+    await new Promise((res) => setTimeout(res, 1500));
+
+    // ✅ Step 2: Insert into public.users table
     const { error: insertError } = await supabase.from("users").insert({
-      id: authUserId,
+      id: authId,
       name: userData.name,
       email: userData.email,
       role: userData.role,
@@ -194,13 +240,19 @@ const onCreateUser = async (userData: any) => {
 
     if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
 
+    // ✅ Store fallback email
+    localStorage.setItem("applywizz_user_email", userData.email);
+
     return true;
   } catch (error: any) {
     console.error("User creation failed:", error);
     setError(`User creation failed: ${error.message}`);
+    sessionStorage.removeItem("signup_email");
+    localStorage.removeItem("applywizz_user_email");
     return false;
   }
 };
+
 
  
 
