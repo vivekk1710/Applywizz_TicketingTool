@@ -18,6 +18,10 @@ import { Plus, Users, FileText, BarChart3, UserPlus, Edit, Settings } from 'luci
 import { supabase } from './lib/supabaseClient';
 import { DialogProvider } from './context/DialogContext';
 import { supabaseAdmin } from './lib/supabaseAdminClient';
+import EmailConfirmed from './components/Auth/EmailConfirmed';
+import LinkExpired from './components/Auth/LinkExpired';
+import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
+
 
 
 function App() {
@@ -44,7 +48,7 @@ function App() {
     if (clientError) {
       console.error("Error loading clients:", clientError.message);
     } else {
-      console.log("Clients:", clientData);
+      // console.log("Clients:", clientData);
       setClients(clientData || []);
     }
 
@@ -812,9 +816,23 @@ function App() {
         );
     }
   };
+  if (window.location.pathname === "/emailConfirmed") {
+  return <EmailConfirmed />;
+}
+
+if (window.location.pathname === "/link-expired") {
+  return <LinkExpired />;
+}
+
+if (window.location.pathname === "/email-verify-redirect") {
+  return <EmailVerifyRedirect />;
+}
+
   if (!currentUser) {
     return <LoginForm onLogin={handleLogin} />;
   }
+
+  
 
   return (
     <DialogProvider>

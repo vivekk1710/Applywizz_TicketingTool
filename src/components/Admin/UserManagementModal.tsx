@@ -3,6 +3,7 @@ import { X, User, Mail, Shield, Building, UserPlus, Edit, Trash2 } from 'lucide-
 import { User as UserType, UserRole } from '../../types';
 import { roleLabels } from '../../data/mockData';
 import { supabaseAdmin } from '../../lib/supabaseAdminClient';
+import { supabase } from '@/lib/supabaseClient';
 
 interface UserManagementModalProps {
   isOpen: boolean;
@@ -71,50 +72,95 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
     });
   };
 
+  // const onCreateUser = async (userData: any) => {
+  //   try {
+  //     // Create auth user
+  //     const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
+  //       email: userData.email,
+  //       password: userData.password,
+  //       email_confirm: true,
+  //       user_metadata: {
+  //         name: userData.name,
+  //         role: userData.role,
+  //         department: userData.department
+  //       }
+  //     });
+
+  //     if (authError) throw new Error(`Auth error: ${authError.message}`);
+  //     if (!authUser.user) throw new Error('No user data returned');
+
+  //     // Create user in public.users table
+  //     const { error: dbError } = await supabaseAdmin
+  //       .from('users')
+  //       .insert({
+  //         id: authUser.user.id,
+  //         name: userData.name,
+  //         email: userData.email,
+  //         role: userData.role,
+  //         department: userData.department,
+  //         is_active: userData.isActive
+  //       });
+
+  //     if (dbError) {
+  //       // Rollback auth user if DB insert fails
+  //       await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
+  //       throw new Error(`DB error: ${dbError.message}`);
+  //     }
+
+  //     // Refresh UI
+  //     fetchUsers();
+  //     return true;
+  //   } catch (error) {
+  //     console.error('User creation failed:', error);
+  //     setError(`User creation failed: ${error.message}`);
+  //     return false;
+  //   }
+  // };
+
+
+  
   const onCreateUser = async (userData: any) => {
-    try {
-      // Create auth user
-      const { data: authUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: userData.email,
-        password: userData.password,
-        email_confirm: true,
-        user_metadata: {
+  try {
+    // ✅ Step 1: Create Supabase Auth user + send email verification
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        emailRedirectTo: "https://applywizzcrm.vercel.app/emailConfirmed", // ✅ Set your confirmed page
+        data: {
           name: userData.name,
           role: userData.role,
           department: userData.department
         }
-      });
-
-      if (authError) throw new Error(`Auth error: ${authError.message}`);
-      if (!authUser.user) throw new Error('No user data returned');
-
-      // Create user in public.users table
-      const { error: dbError } = await supabaseAdmin
-        .from('users')
-        .insert({
-          id: authUser.user.id,
-          name: userData.name,
-          email: userData.email,
-          role: userData.role,
-          department: userData.department,
-          is_active: userData.isActive
-        });
-
-      if (dbError) {
-        // Rollback auth user if DB insert fails
-        await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
-        throw new Error(`DB error: ${dbError.message}`);
       }
+    });
+ 
+    if (signUpError) throw new Error(`Auth error: ${signUpError.message}`);
+    const authUserId = signUpData.user?.id;
+    if (!authUserId) throw new Error("No auth user ID returned");
+ 
+    // ✅ Step 2: Insert into public.users (linked by authUserId)
+    const { error: insertError } = await supabase.from("users").insert({
+      id: authUserId,
+      name: userData.name,
+      email: userData.email,
+      role: userData.role,
+      department: userData.department,
+      is_active: userData.isActive
+    });
+ 
+    if (insertError) throw new Error(`DB insert error: ${insertError.message}`);
+ 
+    return true;
+  } catch (error: any) {
+    console.error("User creation failed:", error);
+    setError(`User creation failed: ${error.message}`);
+    return false;
+  }
+};
+ 
+ 
 
-      // Refresh UI
-      fetchUsers();
-      return true;
-    } catch (error) {
-      console.error('User creation failed:', error);
-      setError(`User creation failed: ${error.message}`);
-      return false;
-    }
-  };
 
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
