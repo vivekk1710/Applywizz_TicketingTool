@@ -905,12 +905,6 @@ function App() {
     // );
     <DialogProvider>
       <BrowserRouter>
-        <UserManagementModal
-          isOpen={isUserManagementModalOpen}
-          onClose={() => setIsUserManagementModalOpen(false)}
-          onUpdateUser={handleUpdateUser}
-          onDeleteUser={handleDeleteUser}
-        />
         <Routes>
           {/* Public auth routes */}
           <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
@@ -948,6 +942,12 @@ function App() {
             }
           />
         </Routes>
+        <UserManagementModal
+          isOpen={isUserManagementModalOpen}
+          onClose={() => setIsUserManagementModalOpen(false)}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
+        />
       </BrowserRouter>
     </DialogProvider>
   );
