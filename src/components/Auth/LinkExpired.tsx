@@ -29,7 +29,7 @@ const LinkExpired = () => {
         type: "signup",
         email,
         options: {
-          emailRedirectTo: "https://applywizzcrm.vercel.app/EmailConfirmed",
+          emailRedirectTo: "https://applywizz-ticketing-tool.vercel.app/EmailConfirmed",
         },
       });
       if (error) throw error;
