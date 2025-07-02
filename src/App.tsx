@@ -910,6 +910,7 @@ function App() {
           <Route path="/EmailVerifyRedirect" element={<EmailVerifyRedirect />} />
           <Route path="/LinkExpired" element={<LinkExpired />} />
           <Route path="/EmailConfirmed" element={<EmailConfirmed />} />
+          <Route path="/vivek" element={<><h1>Welcome to Vivek's Page</h1></>} />
           {/* Login route */}
           <Route
             path="/login"
