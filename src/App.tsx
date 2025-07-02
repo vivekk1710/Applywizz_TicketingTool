@@ -918,7 +918,7 @@ function App() {
               : <Navigate to="/" replace />}
           />
           {/* Protected main app routes */}
-          <Route
+          {/* <Route
             path="/*"
             element={
               currentUser ? (
@@ -934,13 +934,13 @@ function App() {
                       {renderMainContent()}
                     </main>
                   </div>
-                  {/* Modals (keep existing modal code) */}
+                  {/* Modals (keep existing modal code) * /}
                 </div>
               ) : (
                 <Navigate to="/login" replace />
               )
             }
-          />
+          /> */}
         </Routes>
       </BrowserRouter>
     </DialogProvider>
