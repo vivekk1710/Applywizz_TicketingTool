@@ -25,7 +25,7 @@ const EmailVerifyRedirect = () => {
 
       if (!email || !token_hash || type !== "email") {
         setToast({ type: "error", message: "Missing or invalid verification link." });
-        setTimeout(() => navigate("/link-expired"), 2000);
+        setTimeout(() => navigate("/link-expired"), 3000);
         return;
       }
 
@@ -50,12 +50,12 @@ const EmailVerifyRedirect = () => {
 
         setTimeout(() => {
           navigate(`/EmailConfirmed?email=${encodeURIComponent(email)}`);
-        }, 2000);
+        }, 3000);
 
       } catch (err) {
         console.error("❌ Unexpected error:", err);
         setToast({ type: "error", message: "Unexpected error verifying email." });
-        setTimeout(() => navigate("/link-expired"), 2000);
+        setTimeout(() => navigate("/link-expired"), 3000);
       }
     };
 

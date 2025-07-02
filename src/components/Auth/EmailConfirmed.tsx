@@ -59,7 +59,7 @@ const EmailConfirmed = () => {
     //       const { error } = await supabase.auth.updateUser({ password });
     //       if (error) throw error;
     //       alert("✅ Password updated. Redirecting to login...");
-    //       setTimeout(() => navigate("/"), 2000);
+    //       setTimeout(() => navigate("/"), 3000);
     //     } catch (e: any) {
     //       alert("❌ " + e.message);
     //     } finally {
@@ -84,7 +84,7 @@ const EmailConfirmed = () => {
 
             // ✅ 3. Redirect to login
             alert("Password updated successfully! Redirecting to login...");
-            setTimeout(() => navigate("/login"), 2000);
+            setTimeout(() => navigate("/login"), 3000);
         } catch (e: any) {
             alert("Error updating password: " + e.message);
         } finally {

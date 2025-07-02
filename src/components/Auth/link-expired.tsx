@@ -37,7 +37,7 @@ export default function LinkExpired() {
   //     alert("✅ Verification link resent");
   //     setTimeout(() => {
   //       navigate("/EmailVerifyRedirect?email=" + encodeURIComponent(email));
-  //     }, 2000);
+  //     }, 3000);
   //   } catch (err: any) {
   //     alert("❌ " + err.message);
   //   } finally {
@@ -61,7 +61,7 @@ export default function LinkExpired() {
       if (error) throw error;
 
       alert("Verification email resent!");
-      setTimeout(() => navigate("/"), 2000);
+      setTimeout(() => navigate("/"), 3000);
     } catch (err: any) {
       alert("Error resending email: " + err.message);
     } finally {
