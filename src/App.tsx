@@ -21,7 +21,7 @@ import { supabaseAdmin } from './lib/supabaseAdminClient';
 import EmailConfirmed from './components/Auth/EmailConfirmed';
 import LinkExpired from './components/Auth/link-expired';
 import EmailVerifyRedirect from './components/Auth/EmailVerifyRedirect';
-import { BrowserRouter as Router, Routes, Route, BrowserRouter, Navigate } from 'react-router-dom';
+import {   BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 
 

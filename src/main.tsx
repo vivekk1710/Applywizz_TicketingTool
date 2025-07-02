@@ -9,16 +9,16 @@
 //   </StrictMode>
 // );
 
+// src/main.tsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { BrowserRouter } from 'react-router-dom';
 
+// ❌ REMOVE BrowserRouter from here
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <App />
-    </BrowserRouter>
+    {/* ❌ Remove this BrowserRouter wrapper */}
+    <App /> {/* Just render App directly */}
   </React.StrictMode>
 );
