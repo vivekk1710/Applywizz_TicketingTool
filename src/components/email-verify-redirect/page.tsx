@@ -76,5 +76,6 @@ const EmailVerifyRedirect = () => {
             <div className="text-blue-600 text-lg font-medium">
                 Confirmation link clicked!
             </div>
-            </div>);
+        </div>
+    );
 }; export default EmailVerifyRedirect;

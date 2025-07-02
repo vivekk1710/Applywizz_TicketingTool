@@ -118,7 +118,7 @@ function App() {
   const [users, setUsers] = useState<User[]>([]);
   const [pendingClients, setPendingClients] = useState<any[]>([]);
   const [filterPriority, setFilterPriority] = useState<'all' | 'critical' | 'high' | 'medium' | 'low'>('all');
- 
+
 
   // State to store the clients
   const [clients, setClients] = useState<Client[]>([]);
@@ -143,9 +143,9 @@ function App() {
   const [assignments, setAssignments] = useState<Record<string, AssignedUser[]>>({});
 
   const [escalations, setEscalations] = useState<any[]>([]);
-  
+
   const [filterStatus, setFilterStatus] = useState<TicketStatus | 'all'>('all');
-  const [filterType, setFilterType] = useState<TicketType | 'all'>('all');  
+  const [filterType, setFilterType] = useState<TicketType | 'all'>('all');
 
   useEffect(() => {
     fetchData();
@@ -817,76 +817,76 @@ function App() {
     }
   };
   if (window.location.pathname === "/EmailConfirmed") {
-  return <EmailConfirmed />;
-}
+    return <EmailConfirmed />;
+  }
 
-if (window.location.pathname === "/LinkExpired") {
-  return <LinkExpired />;
-}
+  if (window.location.pathname === "/LinkExpired") {
+    return <LinkExpired />;
+  }
 
-if (window.location.pathname === "/EmailVerifyRedirect") {
-  return <EmailVerifyRedirect />;
-}
+  if (window.location.pathname === "/email-verify-redirect") {
+    return <EmailVerifyRedirect />;
+  }
 
   if (!currentUser) {
     return <LoginForm onLogin={handleLogin} />;
   }
 
-  
+
 
   return (
     <DialogProvider>
-    <div className="min-h-screen bg-gray-50">
-      <Navbar user={currentUser} onLogout={handleLogout} />
+      <div className="min-h-screen bg-gray-50">
+        <Navbar user={currentUser} onLogout={handleLogout} />
 
-      <div className="flex">
-        <Sidebar
+        <div className="flex">
+          <Sidebar
+            user={currentUser}
+            activeView={activeView}
+            onViewChange={setActiveView}
+          />
+
+          <main className="flex-1 p-8">
+            {renderMainContent()}
+          </main>
+        </div>
+
+        <CreateTicketModal
           user={currentUser}
-          activeView={activeView}
-          onViewChange={setActiveView}
+          isOpen={isCreateTicketModalOpen}
+          onClose={() => setIsCreateTicketModalOpen(false)}
+          onSubmit={handleCreateTicket}
+          onTicketCreated={fetchData}
         />
 
-        <main className="flex-1 p-8">
-          {renderMainContent()}
-        </main>
+        {renderTicketEditModal(selectedTicket, "edit")}
+
+        <ClientOnboardingModal
+          user={currentUser}
+          isOpen={isClientOnboardingModalOpen}
+          onClose={() => setIsClientOnboardingModalOpen(false)}
+          onClientOnboarded={fetchData}
+        />
+
+        <ClientEditModal
+          client={selectedClient}
+          isOpen={isClientEditModalOpen}
+          currentUserRole={currentUser.role}
+          onClose={() => {
+            setIsClientEditModalOpen(false);
+            setSelectedClient(null);
+          }}
+          onSubmit={handleUpdateClient}
+        />
+
+        <UserManagementModal
+          isOpen={isUserManagementModalOpen}
+          onClose={() => setIsUserManagementModalOpen(false)}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
+        />
       </div>
-
-      <CreateTicketModal
-        user={currentUser}
-        isOpen={isCreateTicketModalOpen}
-        onClose={() => setIsCreateTicketModalOpen(false)}
-        onSubmit={handleCreateTicket}
-        onTicketCreated={fetchData}
-      />
-
-      {renderTicketEditModal(selectedTicket, "edit")}
-
-      <ClientOnboardingModal
-        user={currentUser}
-        isOpen={isClientOnboardingModalOpen}
-        onClose={() => setIsClientOnboardingModalOpen(false)}
-        onClientOnboarded={fetchData}
-      />
-
-      <ClientEditModal
-        client={selectedClient}
-        isOpen={isClientEditModalOpen}
-        currentUserRole={currentUser.role}
-        onClose={() => {
-          setIsClientEditModalOpen(false);
-          setSelectedClient(null);
-        }}
-        onSubmit={handleUpdateClient}
-      />
-
-      <UserManagementModal
-        isOpen={isUserManagementModalOpen}
-        onClose={() => setIsUserManagementModalOpen(false)}
-        onUpdateUser={handleUpdateUser}
-        onDeleteUser={handleDeleteUser}
-      />
-    </div>
-  </DialogProvider>
+    </DialogProvider>
   );
 }
 
