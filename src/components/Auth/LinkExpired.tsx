@@ -29,14 +29,14 @@ const LinkExpired = () => {
         type: "signup",
         email,
         options: {
-          emailRedirectTo: "https://applywizzcrm.vercel.app/emailConfirmed",
+          emailRedirectTo: "https://applywizzcrm.vercel.app/EmailConfirmed",
         },
       });
       if (error) throw error;
 
       alert("✅ Verification link resent");
       setTimeout(() => {
-        navigate("/email-verify-redirect?email=" + encodeURIComponent(email));
+        navigate("/EmailVerifyRedirect?email=" + encodeURIComponent(email));
       }, 2000);
     } catch (err: any) {
       alert("❌ " + err.message);

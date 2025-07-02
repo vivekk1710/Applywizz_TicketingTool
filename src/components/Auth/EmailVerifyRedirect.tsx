@@ -29,7 +29,7 @@ const EmailVerifyRedirect = () => {
         const type = new URLSearchParams(window.location.search).get("type");
 
         if (!email || !token_hash || type !== "email") {
-          navigate("/link-expired");
+          navigate("/LinkExpired");
           return;
         }
 
@@ -40,13 +40,13 @@ const EmailVerifyRedirect = () => {
         });
 
         if (error || !data.user) {
-          navigate("/link-expired");
+          navigate("/LinkExpired");
           return;
         }
 
-        navigate("/emailConfirmed?email=" + encodeURIComponent(email));
+        navigate("/EmailConfirmed?email=" + encodeURIComponent(email));
       } catch (err) {
-        navigate("/link-expired");
+        navigate("/LinkExpired");
       }
     };
 

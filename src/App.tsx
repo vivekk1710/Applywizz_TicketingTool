@@ -816,15 +816,15 @@ function App() {
         );
     }
   };
-  if (window.location.pathname === "/emailConfirmed") {
+  if (window.location.pathname === "/EmailConfirmed") {
   return <EmailConfirmed />;
 }
 
-if (window.location.pathname === "/link-expired") {
+if (window.location.pathname === "/LinkExpired") {
   return <LinkExpired />;
 }
 
-if (window.location.pathname === "/email-verify-redirect") {
+if (window.location.pathname === "/EmailVerifyRedirect") {
   return <EmailVerifyRedirect />;
 }
 
