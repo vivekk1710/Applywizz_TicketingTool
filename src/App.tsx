@@ -935,12 +935,7 @@ function App() {
                     </main>
                   </div>
                   {/* Modals (keep existing modal code) */}
-                  <UserManagementModal
-                    isOpen={isUserManagementModalOpen}
-                    onClose={() => setIsUserManagementModalOpen(false)}
-                    onUpdateUser={handleUpdateUser}
-                    onDeleteUser={handleDeleteUser}
-                  />
+                  
                 </div>
               ) : (
                 <Navigate to="/login" replace />
