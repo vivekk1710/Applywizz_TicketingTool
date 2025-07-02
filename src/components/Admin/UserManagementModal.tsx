@@ -204,7 +204,7 @@ export const UserManagementModal: React.FC<UserManagementModalProps> = ({
 
 const onCreateUser = async (userData: any) => {
   try {
-    const redirectUrl = `https://applywizz-ticketing-tool.vercel.app/link-expired?email=${encodeURIComponent(userData.email)}`;
+    const redirectUrl = `https://applywizz-ticketing-tool.vercel.app/Auth/link-expired?email=${encodeURIComponent(userData.email)}`;
 
     // ✅ Step 1: Create Supabase Auth user + send email verification
     const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
