@@ -51,7 +51,6 @@ export default function LinkExpired() {
     try {
       // ✅ Resend verification with same redirect format
       const redirectUrl = `https://yourdomain.com/EmailVerifyRedirect?email=${encodeURIComponent(email)}`;
-
       const { error } = await supabase.auth.resend({
         type: "signup",
         email,
