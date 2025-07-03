@@ -494,7 +494,7 @@ export const CreateTicketModal: React.FC<CreateTicketModalProps> = ({
       <div className="flex items-center space-x-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="text-sm">
           <span className="font-medium text-blue-900">Client : {selectedClient.full_name} has </span>
-          <span className="text-blue-700 ml-2">CA Team Lead : {(selectedClient.careerassociatemanagerid[0]?.name) || 'Not assigned'}</span>
+          <span className="text-blue-700 ml-2">CA Team Lead : {(selectedClient.careerassociatemanagerid?.name) || 'Not assigned'}</span>
         </div>
       </div>
     )
