@@ -52,20 +52,31 @@ const EmailConfirmed = () => {
         verifyEmail();
     }, []);
 
-    //   const handleUpdatePassword = async () => {
+    // const handleUpdatePassword = async () => {
     //     if (!password || password.length < 6) return;
+
     //     setLoading(true);
     //     try {
-    //       const { error } = await supabase.auth.updateUser({ password });
-    //       if (error) throw error;
-    //       alert("✅ Password updated. Redirecting to login...");
-    //       setTimeout(() => navigate("/"), 3000);
+    //         // ✅ 1. Update password in Supabase
+    //         const { error } = await supabase.auth.updateUser({
+    //             password
+    //         });
+
+    //         if (error) throw error;
+
+    //         // ✅ 2. Clear stored email
+    //         localStorage.removeItem("applywizz_user_email");
+    //         sessionStorage.removeItem("signup_email");
+
+    //         // ✅ 3. Redirect to login
+    //         alert("Password updated successfully! Redirecting to login...");
+    //         setTimeout(() => navigate("/login"), 3000);
     //     } catch (e: any) {
-    //       alert("❌ " + e.message);
+    //         alert("Error updating password: " + e.message);
     //     } finally {
-    //       setLoading(false);
+    //         setLoading(false);
     //     }
-    //   };
+    // };
     const handleUpdatePassword = async () => {
         if (!password || password.length < 6) return;
 
@@ -78,11 +89,29 @@ const EmailConfirmed = () => {
 
             if (error) throw error;
 
-            // ✅ 2. Clear stored email
+            // ✅ 2. Insert into public.users table (if not already)
+            const {
+                data: { session },
+                error: sessionError
+            } = await supabase.auth.getSession();
+
+            if (!sessionError && session?.user) {
+                const user = session.user;
+                await supabase.from("users").insert({
+                    id: user.id,
+                    email: user.email,
+                    name: user.user_metadata?.name || "New User",
+                    role: user.user_metadata?.role || "user",
+                    department: user.user_metadata?.department || "",
+                    is_active: true
+                });
+            }
+
+            // ✅ 3. Clear stored email
             localStorage.removeItem("applywizz_user_email");
             sessionStorage.removeItem("signup_email");
 
-            // ✅ 3. Redirect to login
+            // ✅ 4. Redirect to login
             alert("Password updated successfully! Redirecting to login...");
             setTimeout(() => navigate("/login"), 3000);
         } catch (e: any) {
@@ -91,6 +120,7 @@ const EmailConfirmed = () => {
             setLoading(false);
         }
     };
+
 
     if (status === "pending") {
         return (
