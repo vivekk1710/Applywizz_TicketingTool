@@ -32,6 +32,7 @@ export type TicketStatus = 'open' | 'in_progress' | 'resolved' | 'escalated' | '
 export type AssignedUser = {
   id: string;
   name: string;
+  role: string;
 };
 
 export interface User {
@@ -91,7 +92,7 @@ export interface TicketComment {
   isInternal: boolean;
 }
 
-export interface SLAConfig {
+export type SLAConfig = {
   [key in TicketType]: {
     priority: TicketPriority;
     hours: number;

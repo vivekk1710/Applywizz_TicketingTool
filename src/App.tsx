@@ -76,7 +76,8 @@ function App() {
       // assignmentMap[ticket_id].push({ id: user_id, name: userMap.get(user_id) });
       assignmentMap[ticket_id].push({
         id: user_id,
-        name: userMap.get(user_id) ?? 'Unknown'
+        name: userMap.get(user_id) ?? 'Unknown',
+        role: userData.find(u => u.id === user_id)?.role || 'Unknown Role'
       });
 
     });

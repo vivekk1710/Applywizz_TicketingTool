@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 interface AssignedUser {
   id: string;
   name: string;
+  role: string;
 }
 
 interface TicketEditModalProps {
@@ -69,7 +70,7 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
 
       const { data, error } = await supabase
         .from('users')
-        .select('name')
+        .select('name ,role')
         .eq('id', ticket.createdby)
         .single();
 
@@ -840,7 +841,7 @@ export const VLTicketEditModal: React.FC<TicketEditModalProps> = ({
                     {assignments[ticket.id]?.length
                       ? assignments[ticket.id].map((u, i) => (
                         <span key={u.id}>
-                          {u.name}
+                          {u.name} ({u.role?.replace('_', ' ') || 'Unknown Role'})
                           {i < assignments[ticket.id].length - 1 && ', '}
                         </span>
                       ))
